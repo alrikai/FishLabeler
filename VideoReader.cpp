@@ -69,7 +69,23 @@ void VideoReader::intialize_ffmpeg()
     av_dump_format(av_params.fmt_ctx, 0, vpath.c_str(), 0);
 }
 
-void VideoReader::parse_video()
+VideoFrame<VideoReader::PixelT> VideoReader::read_video_frames(const int frame_index)
+{
+    //TODO: need to consider different caching approaches -- here we always read the new frames in starting at 
+    //the 0th index, but if we have a large cache (i.e. larger than the #frames read each time), then it would 
+    //be better to have a more intelligent scheme for reading the frames --> need to experiment some more, and this
+    //function is where the different caching policies could be tried out
+    static constexpr int NREAD_FRAMES = 16;
+    int num_frames_read = parse_video(frame_index, NREAD_FRAMES);
+    assert(num_frames_read > 0);
+    if (num_frames_read < NREAD_FRAMES) {
+        //NOTE: this should be indicative of us being at the end of the video?
+        std::cout << "NOTE: read " << num_frames_read << " out of requested " << NREAD_FRAMES << " #frames" << std::endl;
+    }
+    return frame_cache[0];
+}
+
+int VideoReader::parse_video(const int base_frame_index, const int num_read_frames)
 {
     av_params.frame = av_frame_alloc();
     av_params.BGR_frame = av_frame_alloc();
@@ -90,15 +106,16 @@ void VideoReader::parse_video()
     av_params.BGR_frame->width = av_params.video_dec_ctx->width;
     av_params.BGR_frame->height =  av_params.video_dec_ctx->height;
     bool got_frame = false;
-    while(av_read_frame(av_params.fmt_ctx, &av_params.pkt) >= 0) {
+    int nframes_read = 0;
+    while(av_read_frame(av_params.fmt_ctx, &av_params.pkt) >= 0 && nframes_read < num_read_frames) {
         auto fdata = decode_packet<PixelT>(false);
         got_frame = fdata != nullptr;
         av_free_packet(&av_params.pkt);
 
-        frames.emplace_back(fdata, av_params.BGR_frame->height, av_params.BGR_frame->width);
-
-        //TODO: add the fdata to the cache? -- need to handle the lifetime (and reading) better,
-        //s.t. we do it on-demand, rather than all at once (since it'll be like, > 2GB)
+        //TODO: I should probably have some more intelligent caching scheme. Can (should?) experiment with this some more
+        frame_cache[nframes_read] = VideoFrame<PixelT>(fdata, av_params.BGR_frame->height, av_params.BGR_frame->width);
+        frame_cache_idxmap[nframes_read] = base_frame_index + nframes_read;
+        nframes_read++;
 
         //check if the frame-acquisition has been cancelled
         //if(!get_frames.load(std::memory_order_relaxed))
@@ -113,13 +130,13 @@ void VideoReader::parse_video()
     av_params.pkt.size = 0;
     do {
         auto fdata = decode_packet<PixelT>(true);
-        frames.emplace_back(fdata, av_params.BGR_frame->height, av_params.BGR_frame->width);
+        frame_cache[nframes_read] = VideoFrame<PixelT>(fdata, av_params.BGR_frame->height, av_params.BGR_frame->width);
+        frame_cache_idxmap[nframes_read] = base_frame_index + nframes_read;
+        nframes_read++;
         got_frame = fdata != nullptr;
         std::cout << "Flushing Cached Frames" << std::endl;
-    } while (got_frame);
+    } while (got_frame && nframes_read < num_read_frames);
 
-	//NOTE: is this valid? (dont think so)
-	//stop_capture();
-	//get_frames.store(false, std::memory_order_relaxed);	
-    //return (got_frame > 0); 
+    //return the actual number of frames read
+    return nframes_read;
 }

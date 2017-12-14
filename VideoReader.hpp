@@ -25,37 +25,68 @@ public:
     VideoReader(const std::string& video_path, const int FPS = 30)
         : vpath(video_path), FPS(FPS), current_frame_idx(0)
     {
-        /*
         //-1 indicates it's not mapped to anything
         for (int i = 0; i < VFRAME_CACHE_SIZE; i++) {
             frame_cache_idxmap[i] = -1;
         }
-        */
 
         intialize_ffmpeg();
+        //populate the frame cache
+        read_video_frames(0);
+
+        num_req = 0;
+        num_misses = 0;
     }
 
-    VideoFrame<PixelT> get_frame(const int index) const {
-        return frames[index];
+    VideoFrame<PixelT> get_frame(const int index) {
+        num_req++;
+        //TODO: should I be updating the current_frame_index for this type of access?
+        for (int i = 0; i < VFRAME_CACHE_SIZE; i++) {
+            if (index == frame_cache_idxmap[i]) {
+                return frame_cache[i];
+            }
+        }
+
+        //TODO: just out of interest -- keep track of the cache miss rates
+        num_misses++;
+
+        //read the target frame, and frames around it. Return the target frame, read the surrounding frames into the frame cache
+        return read_video_frames(index);
     }
 
     VideoFrame<PixelT> get_next_frame() {
-        auto frame = frames[current_frame_idx];
-        current_frame_idx++;
-        return frame;
+        num_req++;
+        //NOTE: this assumes that the cache frames are in monotonically increasing order 
+        current_frame_idx += 1;
+        for (int i = 0; i < VFRAME_CACHE_SIZE; i++) {
+            if (current_frame_idx == frame_cache_idxmap[i]) {
+                return frame_cache[i];
+            }
+        }
+        //TODO: just out of interest -- keep track of the cache miss rates
+        num_misses++;
+
+        return read_video_frames(current_frame_idx);
     }
 
     int get_num_frames() const {
         return av_params.video_frame_count;
     }
 
-    void parse_video();
+    float get_cache_stats() const {
+        float cache_miss_rate = static_cast<float>(num_misses) / num_req;
+        std::cout << "VideoReader: " << cache_miss_rate << "\% miss rate" << std::endl;
+        return cache_miss_rate;
+    }
+
 private:
 
     void intialize_ffmpeg();
     template <typename T>
     T* decode_packet(bool cached);
 
+    int parse_video(const int base_frame_index, const int num_read_frames);
+    VideoFrame<PixelT> read_video_frames(const int frame_index);
 
     //parameters for the video demuxing and decoding
     struct AVParams
@@ -112,10 +143,14 @@ private:
     int current_frame_idx;
     AVParams av_params;
 
-    std::vector<VideoFrame<PixelT>> frames;
+    //NOTE: can't just read the entire video, as it will take too much memory
+    //std::vector<VideoFrame<PixelT>> frames;
 
-    //std::array<VideoFrame<PixelT>, VFRAME_CACHE_SIZE> frame_cache;
-    //std::array<int, VFRAME_CACHE_SIZE> frame_cache_idxmap;
+    std::array<VideoFrame<PixelT>, VFRAME_CACHE_SIZE> frame_cache;
+    std::array<int, VFRAME_CACHE_SIZE> frame_cache_idxmap;
+
+    mutable uint64_t num_req;
+    mutable uint64_t num_misses;
 };
 
 

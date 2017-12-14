@@ -1,0 +1,22 @@
+# Object files
+*.o
+
+# Libraries
+*.lib
+*.a
+
+# Shared objects
+*.dll
+*.so
+*.so.*
+*.dylib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# vim files
+*.swp
+*.swo
+*.ignore
