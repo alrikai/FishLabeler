@@ -3,6 +3,7 @@
 
 #include <QHBoxLayout>
 #include <QVBoxLayout>
+#include <QTimer>
 
 #include "VideoWindow.hpp"
 
@@ -20,6 +21,12 @@ VideoWindow::VideoWindow(QWidget *parent)
     setCentralWidget(main_window);
     fviewer = std::make_shared<FrameViewer>(main_window);
     init_window();
+
+	//TODO: eventually, will want to load this from the UI
+    const std::string vpath {"/home/alrik/Data/NRTFish/20130117144639.mts"};
+	vreader = std::make_unique<VideoReader> (vpath);
+
+	QTimer::singleShot(100, this, SLOT(showFullScreen()));
 }
 
 void VideoWindow::init_window()
@@ -40,7 +47,6 @@ void VideoWindow::init_window()
 
     QHBoxLayout* lhs_layout = new QHBoxLayout;
 	auto fview_p = fviewer.get();
-    //fview = new QGraphicsView(fview_p);
     fview = new FrameView(fview_p);
     lhs_layout->addWidget(fview);
 
@@ -60,21 +66,26 @@ void VideoWindow::init_window()
 
 void VideoWindow::next_frame()
 {
-    //TODO: move forwards
-	
-	frame_index += 1;
-	auto fnum_str = utils::make_framecount_string(frame_index);
-    framenum_label->setText(fnum_str.c_str());
+	if (frame_index < vreader->get_num_frames()) {
+        auto vframe = vreader->get_next_frame();
+		fviewer->display_frame(vframe);
+		frame_index += 1;
+		auto fnum_str = utils::make_framecount_string(frame_index);
+		framenum_label->setText(fnum_str.c_str());
+		fview->update();
+	}
 }
 
 void VideoWindow::prev_frame()
 {
-	//TODO: move backwards
-	
-
-	frame_index -= 1;
-	auto fnum_str = utils::make_framecount_string(frame_index);
-    framenum_label->setText(fnum_str.c_str());
+	if (frame_index > 0) {
+	    frame_index -= 1;
+		auto vframe = vreader->get_frame(frame_index);
+		fviewer->display_frame(vframe);
+		auto fnum_str = utils::make_framecount_string(frame_index);
+		framenum_label->setText(fnum_str.c_str());
+		fview->update();
+	}
 }
 
 void VideoWindow::closeEvent(QCloseEvent *evt)
@@ -82,3 +93,28 @@ void VideoWindow::closeEvent(QCloseEvent *evt)
     //TODO: do we need to do anything? Flush out un-written annotations, etc?
 }
 
+#if 0
+    std::cout << "video has " << vreader.get_num_frames() << " #frames" << std::endl;
+    for (int i = 0; i < 10; i++) {
+        auto vframe = vreader.get_next_frame();
+        std::cout << "vf " << i << ": [" << vframe.height << " x " << vframe.width << "]" << std::endl;
+        cv::Mat cv_frame (vframe.height, vframe.width, CV_8UC3, vframe.data.get());
+        std::string fname {"vframe_" + std::to_string(i) + ".png"};
+        cv::imwrite(fname, cv_frame);
+    }
+
+    int foffset = 30 * 60 * 60 * 4;
+    auto vframe = vreader.get_frame(foffset);
+    std::string fname {"vframe_" + std::to_string(20) + ".png"};
+    for (int i = 0; i < 10; i++) {
+        auto vframe = vreader.get_next_frame();
+        std::cout << "vf " << foffset + i << ": [" << vframe.height << " x " << vframe.width << "]" << std::endl;
+        cv::Mat cv_frame (vframe.height, vframe.width, CV_8UC3, vframe.data.get());
+        std::string fname {"vframe_" + std::to_string(foffset+i) + ".png"};
+        cv::imwrite(fname, cv_frame);
+    }
+
+
+
+    vreader.get_cache_stats();
+#endif

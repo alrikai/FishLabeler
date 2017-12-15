@@ -1,14 +1,17 @@
 #ifndef FISHLABELER_VIDEOWINDOW_HPP
 #define FISHLABELER_VIDEOWINDOW_HPP
 
+#include <memory>
+
+
 #include <QMainWindow>
 #include <QPlainTextEdit>
 #include <QLabel>
 #include <QPushButton>
 #include <QWidget>
 
+#include "VideoReader.hpp"
 #include "FrameViewer.hpp"
-
 
 class VideoWindow : public QMainWindow
 {
@@ -43,6 +46,7 @@ private:
 	QLabel* framenum_label;
 
 	int frame_index;
+	std::unique_ptr<VideoReader> vreader;
 };
 
 #endif
