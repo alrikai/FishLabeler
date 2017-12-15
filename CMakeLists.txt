@@ -6,7 +6,13 @@ set(CMAKE_INCLUDE_CURRENT_DIR on)
 
 # link to ffmpeg
 set(FFMPEG_LIBS avdevice avformat avfilter avcodec swscale avutil)
-link_directories("/usr/lib64")  
+link_directories("/usr/lib")  
+
+#OpenCV
+FIND_PACKAGE(OpenCV COMPONENTS core highgui imgproc imgcodecs REQUIRED)
+include_directories(${OpenCV_INCLUDE_DIRS})
+message("OpenCV include: " ${OpenCV_INCLUDE_DIRS})
+message("OpenCV link: " ${OpenCV_LIBS})
 
 set(SRCS VideoReader.cpp)
 set(HDRS VideoReader.hpp VideoFrame.hpp) 
@@ -17,5 +23,5 @@ target_link_libraries(FishLabelerCore ${FFMPEG_LIBS}) # ${OpenCV_LIBS} ${LIBS})
 
 set(FLSRC main.cpp)
 add_executable(FishLabeler ${FLSRC})
-target_link_libraries(FishLabeler FishLabelerCore ${FFMPEG_LIBS}) # ${OpenCV_LIBS} ${LIBS})
+target_link_libraries(FishLabeler FishLabelerCore ${FFMPEG_LIBS} ${OpenCV_LIBS}) # ${OpenCV_LIBS} ${LIBS})
 

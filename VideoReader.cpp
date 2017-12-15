@@ -3,35 +3,28 @@
 #include <stdexcept>
 #include <iostream>
 
-
 namespace utils {
-    void open_codec_context(int *stream_idx, AVFormatContext *fmt_ctx, AVMediaType type)
+    int open_codec_context(AVFormatContext*& fmt_ctx, AVCodecContext*& dec_ctx, const AVMediaType type)
     {
-        int ret;
-        AVStream *st;
-        AVCodecContext *dec_ctx = nullptr;
-        AVCodec *dec = nullptr;
+        int stream_idx = -1;
         const std::string media_typestr {av_get_media_type_string(type)};
-        ret = av_find_best_stream(fmt_ctx, type, -1, -1, nullptr, 0);
-        if (ret < 0) {
+        stream_idx = av_find_best_stream(fmt_ctx, type, -1, -1, nullptr, 0);
+        if (stream_idx < 0) {
             std::string err_msg{"ERROR: Could not find " +  media_typestr + " stream in input file"};
             throw std::runtime_error(err_msg);
         } else {
-            *stream_idx = ret;
-            st = fmt_ctx->streams[*stream_idx];
-            // find decoder for the stream 
-            dec_ctx = st->codec;
-            dec = avcodec_find_decoder(dec_ctx->codec_id);
-            if (!dec) {
-                std::string err_msg{"ERROR: Failed to find " + media_typestr + " codec"};
+            AVCodec* dec_codec = avcodec_find_decoder(fmt_ctx->streams[stream_idx]->codecpar->codec_id);
+            dec_ctx = avcodec_alloc_context3(dec_codec);
+            if (avcodec_parameters_to_context(dec_ctx, fmt_ctx->streams[stream_idx]->codecpar) < 0) {
+                std::string err_msg{"ERROR: Could not find " +  media_typestr + " stream in input file"};
                 throw std::runtime_error(err_msg);
             }
-            
-            if (avcodec_open2(dec_ctx, dec, nullptr) < 0) {
+            if (avcodec_open2(dec_ctx, dec_codec, nullptr) < 0) {
                 std::string err_msg{"ERROR: couldn't open " + media_typestr + " codec"};
                 throw std::runtime_error(err_msg);
             }
         }
+        return stream_idx;
     }
 }
 
@@ -49,9 +42,8 @@ void VideoReader::intialize_ffmpeg()
         throw std::runtime_error(err_msg);
     }
 
-    utils::open_codec_context(&av_params.video_stream_idx, av_params.fmt_ctx, AVMEDIA_TYPE_VIDEO);
+    av_params.video_stream_idx = utils::open_codec_context(av_params.fmt_ctx, av_params.video_dec_ctx, AVMEDIA_TYPE_VIDEO);
     av_params.video_stream = av_params.fmt_ctx->streams[av_params.video_stream_idx];
-    av_params.video_dec_ctx = av_params.video_stream->codec;
 
     //TODO: can change these as needed, if we need a specific output dimension
     const int width = av_params.video_dec_ctx->width;
@@ -99,44 +91,86 @@ int VideoReader::parse_video(const int base_frame_index, const int num_read_fram
     av_params.pkt.data = nullptr;
     av_params.pkt.size = 0;
 
-	//allocate the BGRFrame buffer 
-    const int num_bytes = avpicture_get_size(AV_PIX_FMT_BGR24, av_params.video_dec_ctx->width, av_params.video_dec_ctx->height);
+    //NOTE: I would have thought 16 to be the right value here, but 1 seems to be the only one that works
+    static constexpr int AVFRAME_ALIGN = 1;
+
+    //allocate the BGRFrame buffer 
+    const int num_bytes = av_image_get_buffer_size (AV_PIX_FMT_BGR24, av_params.video_dec_ctx->width, av_params.video_dec_ctx->height, AVFRAME_ALIGN);
     uint8_t* BGR_frame_buffer = (uint8_t *)av_malloc(num_bytes*sizeof(uint8_t));
-    avpicture_fill((AVPicture*)av_params.BGR_frame, BGR_frame_buffer, AV_PIX_FMT_BGR24, av_params.video_dec_ctx->width, av_params.video_dec_ctx->height);
+    av_image_fill_arrays (av_params.BGR_frame->data, av_params.BGR_frame->linesize, BGR_frame_buffer, 
+            AV_PIX_FMT_BGR24, av_params.video_dec_ctx->width, av_params.video_dec_ctx->height, AVFRAME_ALIGN);
+
     av_params.BGR_frame->width = av_params.video_dec_ctx->width;
     av_params.BGR_frame->height =  av_params.video_dec_ctx->height;
     bool got_frame = false;
     int nframes_read = 0;
     while(av_read_frame(av_params.fmt_ctx, &av_params.pkt) >= 0 && nframes_read < num_read_frames) {
-        auto fdata = decode_packet<PixelT>(false);
+        auto fdata = decode_frame<PixelT>();
         got_frame = fdata != nullptr;
-        av_free_packet(&av_params.pkt);
+        av_packet_unref(&av_params.pkt);
 
-        //TODO: I should probably have some more intelligent caching scheme. Can (should?) experiment with this some more
-        frame_cache[nframes_read] = VideoFrame<PixelT>(fdata, av_params.BGR_frame->height, av_params.BGR_frame->width);
-        frame_cache_idxmap[nframes_read] = base_frame_index + nframes_read;
-        nframes_read++;
+        if (got_frame) {
+            //TODO: I should probably have some more intelligent caching scheme. Can (should?) experiment with this some more
+            frame_cache[nframes_read] = VideoFrame<PixelT>(fdata, av_params.BGR_frame->height, av_params.BGR_frame->width);
+            frame_cache_idxmap[nframes_read] = base_frame_index + nframes_read;
+            nframes_read++;
+        }
 
         //check if the frame-acquisition has been cancelled
         //if(!get_frames.load(std::memory_order_relaxed))
         //    break;
-		//get roughly the target framerate
-		//auto frame_wait = std::chrono::milliseconds(static_cast<int>(1000/FPS));
-		//std::this_thread::sleep_for(frame_wait);
+        //get roughly the target framerate
+        //auto frame_wait = std::chrono::milliseconds(static_cast<int>(1000/FPS));
+        //std::this_thread::sleep_for(frame_wait);
     }
 
-    //also have to flush the cached frames
+    //also have to flush the cached frames -- presumably this is only important at the end of the video though
     av_params.pkt.data = nullptr;
     av_params.pkt.size = 0;
-    do {
-        auto fdata = decode_packet<PixelT>(true);
-        frame_cache[nframes_read] = VideoFrame<PixelT>(fdata, av_params.BGR_frame->height, av_params.BGR_frame->width);
-        frame_cache_idxmap[nframes_read] = base_frame_index + nframes_read;
-        nframes_read++;
-        got_frame = fdata != nullptr;
-        std::cout << "Flushing Cached Frames" << std::endl;
-    } while (got_frame && nframes_read < num_read_frames);
+    if (nframes_read < num_read_frames) {
+        do {
+            auto fdata = decode_frame<PixelT>();
+            frame_cache[nframes_read] = VideoFrame<PixelT>(fdata, av_params.BGR_frame->height, av_params.BGR_frame->width);
+            frame_cache_idxmap[nframes_read] = base_frame_index + nframes_read;
+            nframes_read++;
+            got_frame = fdata != nullptr;
+            std::cout << "Flushing Cached Frames" << std::endl;
+        } while (got_frame && nframes_read < num_read_frames);
+    }
 
     //return the actual number of frames read
     return nframes_read;
+}
+
+
+namespace ffutils {
+inline char* ffav_err2str(int errnum)
+{
+    static char str[AV_ERROR_MAX_STRING_SIZE];
+    memset(str, 0, sizeof(str));
+    return av_make_error_string(str, AV_ERROR_MAX_STRING_SIZE, errnum);
+}
+}
+
+
+
+bool VideoReader::decode_packet()
+{
+    int ret = avcodec_send_packet(av_params.video_dec_ctx, &av_params.pkt);
+    // In particular, we don't expect AVERROR(EAGAIN), because we read all
+    // decoded frames with avcodec_receive_frame() until done.
+    if (ret < 0) {
+        fprintf(stderr, "NOTE: decode_packet1 ret w/ code: %s -- %d\n", ffutils::ffav_err2str(ret), int(ret == AVERROR_EOF));
+        return decode_packet();
+    }
+    ret = avcodec_receive_frame(av_params.video_dec_ctx, av_params.frame);
+    if (ret < 0 && ret != AVERROR(EAGAIN) && ret != AVERROR_EOF) {
+        fprintf(stderr, "NOTE: decode_packet1 ret w/ code: %s\n", ffutils::ffav_err2str(ret));
+        return false;
+    }
+    if (ret >= 0) {
+       return true; 
+    }
+    fprintf(stderr, "NOTE: decode_packet1 ret w/ code: %s\n", ffutils::ffav_err2str(ret));
+    return false;
 }
