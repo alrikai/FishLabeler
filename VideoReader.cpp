@@ -56,6 +56,7 @@ void VideoReader::intialize_ffmpeg()
         std::string err_msg {"ERROR: couldn't get sws context"};
         throw std::runtime_error(err_msg);
     }
+    av_params.video_time_base = av_q2d (av_params.video_stream->time_base); //(AV_TIME_BASE * av_params.video_dec_ctx->time_base.num) / av_params.video_dec_ctx->time_base.den;
     std::cout << "output: " << height << " x " << width << " @ " << av_get_pix_fmt_name(pix_format) << std::endl;
     //will write the input information (to stderr)
     av_dump_format(av_params.fmt_ctx, 0, vpath.c_str(), 0);
@@ -63,6 +64,28 @@ void VideoReader::intialize_ffmpeg()
 
 VideoFrame<VideoReader::PixelT> VideoReader::read_video_frames(const int frame_index)
 {
+    //in theory, if we just access in-order through the video, we won't need to seek at all; also, 
+    //if we *do* jump around, but it's all within the frame cache, then we also don't need to seek,
+    //but we on;y get to here if there was a cache miss (in which case, we only have to check if the 
+    //requested frame is the next frame) 
+    bool need_to_seek = frame_index != current_frame_idx;
+    if (need_to_seek) {
+        std::cout << "seeking in video " << current_frame_idx << " --> " << frame_index << std::endl;
+        //get the time-adjusted frame index
+        int64_t seek_frame_index = frame_index * av_params.video_time_base;
+        //if(av_seek_frame(av_params.fmt_ctx, -1, seek_frame_index, AVSEEK_FLAG_ANY) < 0) {
+        if(av_seek_frame(av_params.fmt_ctx, -1, seek_frame_index, AVSEEK_FLAG_BACKWARD) < 0) {
+            std::string err_msg {"ERROR: couldn't seek to frame " + std::to_string(seek_frame_index)};
+            throw std::runtime_error(err_msg);
+        }
+
+        //TODO: the above seeks to the nearest prior keyframe, need to still move it along to the actual target frame 
+        //the question is, how do we get the frame number?
+
+
+    }
+
+
     //TODO: need to consider different caching approaches -- here we always read the new frames in starting at 
     //the 0th index, but if we have a large cache (i.e. larger than the #frames read each time), then it would 
     //be better to have a more intelligent scheme for reading the frames --> need to experiment some more, and this
@@ -101,7 +124,7 @@ int VideoReader::parse_video(const int base_frame_index, const int num_read_fram
             AV_PIX_FMT_BGR24, av_params.video_dec_ctx->width, av_params.video_dec_ctx->height, AVFRAME_ALIGN);
 
     av_params.BGR_frame->width = av_params.video_dec_ctx->width;
-    av_params.BGR_frame->height =  av_params.video_dec_ctx->height;
+    av_params.BGR_frame->height = av_params.video_dec_ctx->height;
     bool got_frame = false;
     int nframes_read = 0;
     while(av_read_frame(av_params.fmt_ctx, &av_params.pkt) >= 0 && nframes_read < num_read_frames) {

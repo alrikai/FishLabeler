@@ -103,6 +103,7 @@ private:
 
             video_stream_idx = -1;
             video_frame_count = 0;
+            video_time_base = -1;
             frame = nullptr;
             BGR_frame = nullptr;
         }
@@ -137,6 +138,7 @@ private:
         AVPacket pkt;
 
         int video_frame_count;
+        int64_t video_time_base;
     };
 
 
@@ -165,8 +167,8 @@ T* VideoReader::decode_frame() {
         if(got_frame) {
             if(DEBUG) {
                 //print frame debug info
-                printf("video_frame n:%d coded_n:%d \n",
-                        av_params.video_frame_count++, av_params.frame->coded_picture_number);
+                printf("video_frame n:%d coded_n:%d display_n: %d\n",
+                        av_params.video_frame_count++, av_params.frame->coded_picture_number, av_params.frame->display_picture_number);
             }
 
             //convert input to BGR24
