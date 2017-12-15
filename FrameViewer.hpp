@@ -4,8 +4,6 @@
 #include <QWidget>
 #include "VideoFrame.hpp"
 
-
-
 #include <QObject>
 #include <QGraphicsView>
 #include <QGraphicsScene>
@@ -28,6 +26,7 @@ public:
 
 protected slots:
     void drawBackground(QPainter *painter, const QRectF &rect) override;
+    void drawForeground(QPainter* painter, const QRectF &rect) override;
     void mouseMoveEvent(QGraphicsSceneMouseEvent * mouseEvent) override;
     void mousePressEvent(QGraphicsSceneMouseEvent *event) override;
     void mouseReleaseEvent(QGraphicsSceneMouseEvent *event) override;
@@ -47,9 +46,11 @@ private:
 class FrameView : public QGraphicsView
 {
 public:
-    FrameView(QGraphicsScene* fview, QObject* parent = 0) 
+    FrameView(QGraphicsScene* fview, QWidget* parent = 0)
+        : QGraphicsView(fview, parent)
     {
         fviewer = reinterpret_cast<FrameViewer*>(fview);
+        this->update();
     }
 
     QSize sizeHint() const override {

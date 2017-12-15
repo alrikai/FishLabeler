@@ -40,8 +40,8 @@ void VideoWindow::init_window()
 
     QHBoxLayout* lhs_layout = new QHBoxLayout;
 	auto fview_p = fviewer.get();
-    fview = new QGraphicsView(fview_p);
-    //fview = new FrameView(fview_p);
+    //fview = new QGraphicsView(fview_p);
+    fview = new FrameView(fview_p);
     lhs_layout->addWidget(fview);
 
     QVBoxLayout* main_layout = new QVBoxLayout;
