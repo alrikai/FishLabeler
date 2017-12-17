@@ -15,7 +15,7 @@ class FrameViewer : public QGraphicsScene
 {
 public:
     using PixelT = uint8_t;
-    FrameViewer(QObject *parent = 0);
+    FrameViewer(const VideoFrame<PixelT>& initial_frame, QObject *parent = 0);
 
     void display_frame(const VideoFrame<PixelT>& frame);
 
@@ -25,11 +25,11 @@ public:
     }
 
 protected slots:
-    void drawBackground(QPainter *painter, const QRectF &rect) override;
+    void drawBackground(QPainter* painter, const QRectF &rect) override;
     void drawForeground(QPainter* painter, const QRectF &rect) override;
-    void mouseMoveEvent(QGraphicsSceneMouseEvent * mouseEvent) override;
-    void mousePressEvent(QGraphicsSceneMouseEvent *event) override;
-    void mouseReleaseEvent(QGraphicsSceneMouseEvent *event) override;
+    void mouseMoveEvent(QGraphicsSceneMouseEvent*) override;
+    void mousePressEvent(QGraphicsSceneMouseEvent*) override;
+    void mouseReleaseEvent(QGraphicsSceneMouseEvent*) override;
 
 private:
     QImage current_frame;

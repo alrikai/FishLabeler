@@ -48,7 +48,7 @@ void VideoReader::intialize_ffmpeg()
     //TODO: can change these as needed, if we need a specific output dimension
     const int width = av_params.video_dec_ctx->width;
     const int height = av_params.video_dec_ctx->height;
-    constexpr AVPixelFormat pix_format = AV_PIX_FMT_BGR24;
+    constexpr AVPixelFormat pix_format = AV_PIX_FMT_RGB24; //BGR24;
     av_params.img_transform = sws_getCachedContext(
         nullptr, av_params.video_dec_ctx->width, av_params.video_dec_ctx->height, av_params.video_dec_ctx->pix_fmt,
         width, height, pix_format, SWS_BICUBIC, nullptr, nullptr, nullptr);
@@ -103,8 +103,8 @@ VideoFrame<VideoReader::PixelT> VideoReader::read_video_frames(const int frame_i
 int VideoReader::parse_video(const int base_frame_index, const int num_read_frames)
 {
     av_params.frame = av_frame_alloc();
-    av_params.BGR_frame = av_frame_alloc();
-    if(!av_params.frame || !av_params.BGR_frame) {
+    av_params.RGB_frame = av_frame_alloc();
+    if(!av_params.frame || !av_params.RGB_frame) {
         std::string err_msg {"ERROR: couldn't allocate the frame"};
         throw std::runtime_error(err_msg);
     }
@@ -117,14 +117,14 @@ int VideoReader::parse_video(const int base_frame_index, const int num_read_fram
     //NOTE: I would have thought 16 to be the right value here, but 1 seems to be the only one that works
     static constexpr int AVFRAME_ALIGN = 1;
 
-    //allocate the BGRFrame buffer 
-    const int num_bytes = av_image_get_buffer_size (AV_PIX_FMT_BGR24, av_params.video_dec_ctx->width, av_params.video_dec_ctx->height, AVFRAME_ALIGN);
-    uint8_t* BGR_frame_buffer = (uint8_t *)av_malloc(num_bytes*sizeof(uint8_t));
-    av_image_fill_arrays (av_params.BGR_frame->data, av_params.BGR_frame->linesize, BGR_frame_buffer, 
-            AV_PIX_FMT_BGR24, av_params.video_dec_ctx->width, av_params.video_dec_ctx->height, AVFRAME_ALIGN);
+    //allocate the RGBFrame buffer 
+    const int num_bytes = av_image_get_buffer_size (AV_PIX_FMT_RGB24, av_params.video_dec_ctx->width, av_params.video_dec_ctx->height, AVFRAME_ALIGN);
+    uint8_t* RGB_frame_buffer = (uint8_t *)av_malloc(num_bytes*sizeof(uint8_t));
+    av_image_fill_arrays (av_params.RGB_frame->data, av_params.RGB_frame->linesize, RGB_frame_buffer, 
+            AV_PIX_FMT_RGB24, av_params.video_dec_ctx->width, av_params.video_dec_ctx->height, AVFRAME_ALIGN);
 
-    av_params.BGR_frame->width = av_params.video_dec_ctx->width;
-    av_params.BGR_frame->height = av_params.video_dec_ctx->height;
+    av_params.RGB_frame->width = av_params.video_dec_ctx->width;
+    av_params.RGB_frame->height = av_params.video_dec_ctx->height;
     bool got_frame = false;
     int nframes_read = 0;
     while(av_read_frame(av_params.fmt_ctx, &av_params.pkt) >= 0 && nframes_read < num_read_frames) {
@@ -134,7 +134,7 @@ int VideoReader::parse_video(const int base_frame_index, const int num_read_fram
 
         if (got_frame) {
             //TODO: I should probably have some more intelligent caching scheme. Can (should?) experiment with this some more
-            frame_cache[nframes_read] = VideoFrame<PixelT>(fdata, av_params.BGR_frame->height, av_params.BGR_frame->width);
+            frame_cache[nframes_read] = VideoFrame<PixelT>(fdata, av_params.RGB_frame->height, av_params.RGB_frame->width);
             frame_cache_idxmap[nframes_read] = base_frame_index + nframes_read;
             nframes_read++;
         }
@@ -153,7 +153,7 @@ int VideoReader::parse_video(const int base_frame_index, const int num_read_fram
     if (nframes_read < num_read_frames) {
         do {
             auto fdata = decode_frame<PixelT>();
-            frame_cache[nframes_read] = VideoFrame<PixelT>(fdata, av_params.BGR_frame->height, av_params.BGR_frame->width);
+            frame_cache[nframes_read] = VideoFrame<PixelT>(fdata, av_params.RGB_frame->height, av_params.RGB_frame->width);
             frame_cache_idxmap[nframes_read] = base_frame_index + nframes_read;
             nframes_read++;
             got_frame = fdata != nullptr;

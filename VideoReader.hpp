@@ -74,6 +74,10 @@ public:
         return av_params.video_frame_count;
     }
 
+    float get_video_fps() const {
+        return av_params.video_stream->r_frame_rate.num / (double)av_params.video_stream->r_frame_rate.den;
+    }
+
     float get_cache_stats() const {
         float cache_miss_rate = static_cast<float>(num_misses) / num_req;
         std::cout << "VideoReader: " << cache_miss_rate << "\% miss rate" << std::endl;
@@ -105,7 +109,7 @@ private:
             video_frame_count = 0;
             video_time_base = -1;
             frame = nullptr;
-            BGR_frame = nullptr;
+            RGB_frame = nullptr;
         }
 
         //will have to double check what exactly needs to be freed here
@@ -117,7 +121,7 @@ private:
 
             avformat_close_input(&fmt_ctx);              
             av_free(frame);                  
-            av_free(BGR_frame);
+            av_free(RGB_frame);
 
             if(img_transform) {
                 sws_freeContext(img_transform);
@@ -134,7 +138,7 @@ private:
 
         int video_stream_idx;
         AVFrame *frame;
-        AVFrame *BGR_frame;        
+        AVFrame *RGB_frame;        
         AVPacket pkt;
 
         int video_frame_count;
@@ -171,17 +175,17 @@ T* VideoReader::decode_frame() {
                         av_params.video_frame_count++, av_params.frame->coded_picture_number, av_params.frame->display_picture_number);
             }
 
-            //convert input to BGR24
-            sws_scale(av_params.img_transform, av_params.frame->data, av_params.frame->linesize, 0, av_params.video_dec_ctx->height, av_params.BGR_frame->data, av_params.BGR_frame->linesize); 
+            //convert input to RGB24
+            sws_scale(av_params.img_transform, av_params.frame->data, av_params.frame->linesize, 0, av_params.video_dec_ctx->height, av_params.RGB_frame->data, av_params.RGB_frame->linesize); 
 
             //make a copy of the frame data to be buffered (I think ffmpeg reclaims its AVFrame buffers) 
             T* data_frame;
-            data_frame = reinterpret_cast<T*>(malloc(av_params.BGR_frame->linesize[0] * av_params.video_dec_ctx->height));
+            data_frame = reinterpret_cast<T*>(malloc(av_params.RGB_frame->linesize[0] * av_params.video_dec_ctx->height));
 
             //just to make sure -- NOTE: linesize is in bytes
-            assert((av_params.BGR_frame->linesize[0]/sizeof(uint8_t))*av_params.video_dec_ctx->height==av_params.video_dec_ctx->height*av_params.video_dec_ctx->width*3);
+            assert((av_params.RGB_frame->linesize[0]/sizeof(uint8_t))*av_params.video_dec_ctx->height==av_params.video_dec_ctx->height*av_params.video_dec_ctx->width*3);
 
-            T* src_data = reinterpret_cast<T*>(av_params.BGR_frame->data[0]);
+            T* src_data = reinterpret_cast<T*>(av_params.RGB_frame->data[0]);
             const int n_pixel_elems = av_params.video_dec_ctx->height * av_params.video_dec_ctx->width * 3;
             std::copy(src_data, src_data + n_pixel_elems, data_frame);
     

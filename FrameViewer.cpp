@@ -3,12 +3,13 @@
 #include <iostream>
 #include <QImage>
 
-FrameViewer::FrameViewer(QObject* parent)
+FrameViewer::FrameViewer(const VideoFrame<FrameViewer::PixelT>& initial_frame, QObject* parent)
     : QGraphicsScene(parent) 
 {
     //initialize the current frame to a placeholder
-    static const QString placeholder_path {"/home/alrik/Projects/fishlabeler/data/default_placeholder.png"};
-    current_frame = QImage(placeholder_path);
+    //static const QString placeholder_path {"/home/alrik/Projects/fishlabeler/data/default_placeholder.png"};
+    //current_frame = QImage(placeholder_path);
+    display_frame(initial_frame);
     this->update();
 }
 
@@ -26,16 +27,15 @@ void FrameViewer::display_frame(const VideoFrame<FrameViewer::PixelT>& frame) {
 
 void FrameViewer::drawBackground(QPainter* painter, const QRectF &rect)
 {
-    std::cout << "drawbg: " << rect.left() << ", " << rect.right() << ", " << rect.top() << ", " << rect.bottom() << std::endl; 
     this->addPixmap(QPixmap::fromImage(current_frame));
 }
 
 void FrameViewer::drawForeground(QPainter* painter, const QRectF &rect)
 {
     QPen pen;
-    pen.setWidth(4);
-    pen.setBrush(Qt::lightGray);
-    //pen.setBrush(Qt::red);
+    pen.setWidth(8);
+    //pen.setBrush(Qt::lightGray);
+    pen.setBrush(Qt::red);
     painter->setPen(pen);   
     //TODO: need to convert the new_points to frame coordinates and write them to drawn_points
     for (int i = 0; i < new_points.size(); i++) {

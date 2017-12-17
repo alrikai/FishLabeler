@@ -6,6 +6,7 @@
 
 #include <QMainWindow>
 #include <QPlainTextEdit>
+#include <QLineEdit>
 #include <QLabel>
 #include <QPushButton>
 #include <QWidget>
@@ -34,6 +35,7 @@ private:
 	void init_window();
 	void next_frame();
 	void prev_frame();
+    void apply_video_offset();
 
     //TODO: figure out if Qt manages the lifetime, or if I do...
 	std::shared_ptr<FrameViewer> fviewer;
@@ -44,6 +46,11 @@ private:
 	QPushButton* prev_btn; 
 	QPushButton* next_btn; 
 	QLabel* framenum_label;
+
+    QLineEdit* ql_hour;
+    QLineEdit* ql_min;
+    QLineEdit* ql_sec;
+    QPushButton* offset_btn;
 
 	int frame_index;
 	std::unique_ptr<VideoReader> vreader;
