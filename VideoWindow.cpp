@@ -1,35 +1,42 @@
 #include <iostream>
 #include <string>
 
-#include <QHBoxLayout>
-#include <QVBoxLayout>
 #include <QTimer>
 
 #include "VideoWindow.hpp"
 
 namespace utils {
-	inline std::string make_framecount_string(const int findex) {
-		return std::string {"Frame #: " + std::to_string(findex)};
-	}
+    inline std::string make_framecount_string(const int findex) {
+        return std::string {"Frame #: " + std::to_string(findex)};
+    }
 }
 
 VideoWindow::VideoWindow(QWidget *parent)
-	: QMainWindow(parent)
+    : QMainWindow(parent)
 {
-	//TODO: eventually, will want to load this from the UI
+    //TODO: eventually, will want to load this from the UI
     const std::string vpath {"/home/alrik/Data/NRTFish/20130117144639.mts"};
-	vreader = std::make_unique<VideoReader> (vpath);
+    vreader = std::make_unique<VideoReader> (vpath);
+    auto initial_frame = vreader->get_next_frame();
 
-	auto initial_frame = vreader->get_next_frame();
+    /*
+    static const QString placeholder_path {"/home/alrik/Projects/fishlabeler/data/default_placeholder.png"};
+    auto qimg = QImage(placeholder_path);
+    using PixelT = uint8_t;
+    const int img_sz = qimg.byteCount();
+    auto default_data = new PixelT [img_sz];
+    std::copy(qimg.bits(), qimg.bits() + img_sz, default_data); 
+    auto initial_frame = VideoFrame<PixelT> (default_data, qimg.height(), qimg.width());  
+    */
 
     frame_index = 0;
-	main_window = new QWidget(this);
+    main_window = new QWidget(this);
     setCentralWidget(main_window);
     fviewer = std::make_shared<FrameViewer>(initial_frame, main_window);
     init_window();
 
-	//resizes the screen s.t. the frame fits well
-	QTimer::singleShot(100, this, SLOT(showFullScreen()));
+    //resizes the screen s.t. the frame fits well
+    QTimer::singleShot(100, this, SLOT(showFullScreen()));
 }
 
 void VideoWindow::init_window()
@@ -47,73 +54,34 @@ void VideoWindow::init_window()
         next_frame();
     });
 
-    auto ql_hour_txt = new QLabel("0", main_window);
-    ql_hour_txt->setText("hour: ");
-    ql_hour = new QLineEdit(main_window);
-    /*
-    connect(ql_hour, &QLineEdit::editingFinished, [this]{
-        hour_offset();
-    });
-    */
-
-    auto ql_min_txt = new QLabel("0", main_window);
-    ql_min_txt->setText("min: ");
-    ql_min = new QLineEdit(main_window);
-    /*
-    connect(ql_min, &QLineEdit::editingFinished, [this]{
-        minute_offset();
-    });
-    */
-
-    auto ql_sec_txt = new QLabel("0", main_window);
-    ql_sec_txt->setText("sec: ");
-    ql_sec = new QLineEdit(main_window);
-    /*
-    connect(ql_sec, &QLineEdit::editingFinished, [this]{
-        second_offset();
-    });
-    */
-    constexpr int min_btn_height = 40; 
-    constexpr int min_btn_width = 100;
+    ql_hour = new QLineEdit("0", main_window);
+    ql_min = new QLineEdit("0", main_window);
+    ql_sec = new QLineEdit("0", main_window);
     offset_btn = new QPushButton("apply offset", main_window);
     connect(offset_btn, &QPushButton::clicked, [this]{
         apply_video_offset();
     });
-    offset_btn->setMinimumSize(min_btn_width, min_btn_height);
-    prev_btn->setMinimumSize(min_btn_width, min_btn_height);
-    next_btn->setMinimumSize(min_btn_width, min_btn_height);
 
-    constexpr int max_offset_width = 50;
-    ql_hour->setMaximumWidth(max_offset_width);
-    ql_min->setMaximumWidth(max_offset_width);
-    ql_sec->setMaximumWidth(max_offset_width);
-    constexpr int max_offset_text_width = 40;
-    ql_hour_txt->setMaximumWidth(max_offset_text_width);
-    ql_min_txt->setMaximumWidth(max_offset_text_width);
-    ql_sec_txt->setMaximumWidth(max_offset_text_width);
+    ql_paintsz = new QLineEdit(main_window); 
+    connect(ql_paintsz, &QLineEdit::editingFinished, [this]{
+        adjust_paintbrush_size();
+    });
 
-    cfg_layout->addWidget(framenum_label);
-    cfg_layout->addWidget(ql_hour_txt);
-    cfg_layout->addWidget(ql_hour);
-    cfg_layout->addWidget(ql_min_txt);
-    cfg_layout->addWidget(ql_min);
-    cfg_layout->addWidget(ql_sec_txt);
-    cfg_layout->addWidget(ql_sec);
-    cfg_layout->addWidget(offset_btn);
 
-    cfg_layout->addWidget(prev_btn);
-    cfg_layout->addWidget(next_btn);
+    set_cfgUI_layout(cfg_layout);
 
-	auto metadata_textlabel = new QLabel(main_window);
+
+
+    auto metadata_textlabel = new QLabel(main_window);
     metadata_textlabel->setText("Frame Metadata:");
-	metadata_edit = new QPlainTextEdit(main_window);
+    metadata_edit = new QPlainTextEdit(main_window);
 
     QVBoxLayout* rhs_layout = new QVBoxLayout;
     rhs_layout->addWidget(metadata_textlabel);
-	rhs_layout->addWidget(metadata_edit);
+    rhs_layout->addWidget(metadata_edit);
 
     QHBoxLayout* lhs_layout = new QHBoxLayout;
-	auto fview_p = fviewer.get();
+    auto fview_p = fviewer.get();
     fview = new FrameView(fview_p);
     lhs_layout->addWidget(fview);
 
@@ -125,41 +93,105 @@ void VideoWindow::init_window()
     main_window->setWindowTitle("Fish Labeler");
 
     /* TODO: what else to add? 
-	 * - edit box for pen size (for annotations -- have it default to something (like, 8) 
-	 * - keyboard listener -- left and right arrows to do the next / prev button functionality 
-	 * - zoom in / out of the frame 
-	 */
+     * - keyboard listener -- left and right arrows to do the next / prev button functionality 
+     * - zoom in / out of the frame 
+     */
 
     /* TODO: what else to do?
      * - proper video seeking -- doesn't seem to work currently
      * - ability to use weak labels to jump to specified events (i.e. if we do weak labeleing that there's a fish in a frame, 
      *      then we should have a mode that'll just look at the +- 1 sec around the 'fish in the scene' times.
+     * - make image scroll times faster
+     * - make mouse capture times for annotations faster
      */
 
 }
 
+void VideoWindow::set_cfgUI_layout(QHBoxLayout* cfg_layout)
+{
+    auto ql_hour_txt = new QLabel(main_window);
+    ql_hour_txt->setText("hour: ");
+    auto ql_min_txt = new QLabel(main_window);
+    ql_min_txt->setText("min: ");
+    auto ql_sec_txt = new QLabel(main_window);
+    ql_sec_txt->setText("sec: ");
+    auto ql_paintsz_txt = new QLabel(main_window);
+    ql_paintsz_txt->setText("brush size: ");
+
+    constexpr int min_btn_height = 40; 
+    constexpr int min_btn_width = 100;
+    offset_btn->setMinimumSize(min_btn_width, min_btn_height);
+    prev_btn->setMinimumSize(min_btn_width, min_btn_height);
+    next_btn->setMinimumSize(min_btn_width, min_btn_height);
+
+    constexpr int max_offset_width = 50;
+    ql_hour->setMaximumWidth(max_offset_width);
+    ql_min->setMaximumWidth(max_offset_width);
+    ql_sec->setMaximumWidth(max_offset_width);
+    ql_paintsz->setMaximumWidth(max_offset_width);
+
+    constexpr int max_offset_text_width = 40;
+    ql_hour_txt->setMaximumWidth(max_offset_text_width);
+    ql_min_txt->setMaximumWidth(max_offset_text_width);
+    ql_sec_txt->setMaximumWidth(max_offset_text_width);
+    ql_paintsz_txt->setMaximumWidth(2*max_offset_text_width);
+
+    cfg_layout->addWidget(framenum_label);
+
+    cfg_layout->addWidget(ql_paintsz_txt);
+    cfg_layout->addWidget(ql_paintsz);
+
+    cfg_layout->addWidget(ql_hour_txt);
+    cfg_layout->addWidget(ql_hour);
+    cfg_layout->addWidget(ql_min_txt);
+    cfg_layout->addWidget(ql_min);
+    cfg_layout->addWidget(ql_sec_txt);
+    cfg_layout->addWidget(ql_sec);
+    cfg_layout->addWidget(offset_btn);
+
+    cfg_layout->addWidget(prev_btn);
+    cfg_layout->addWidget(next_btn);
+}
+
+void VideoWindow::keyPressEvent(QKeyEvent *evt)
+{
+    switch(evt->key()) {
+        case Qt::Key_Left:
+            std::cout << "LEFT key" << std::endl;
+            break;
+        case Qt::Key_Right:
+            std::cout << "RIGHT key" << std::endl;
+            break;
+        default:
+            std::cout << "key: " << evt->key() << std::endl;
+
+    }
+        
+    QWidget::keyPressEvent(evt);
+}
+
 void VideoWindow::next_frame()
 {
-	if (frame_index < vreader->get_num_frames()) {
+    if (frame_index < vreader->get_num_frames()) {
         auto vframe = vreader->get_next_frame();
-		fviewer->display_frame(vframe);
-		frame_index += 1;
-		auto fnum_str = utils::make_framecount_string(frame_index);
-		framenum_label->setText(fnum_str.c_str());
-		fview->update();
-	}
+        fviewer->display_frame(vframe);
+        frame_index += 1;
+        auto fnum_str = utils::make_framecount_string(frame_index);
+        framenum_label->setText(fnum_str.c_str());
+        fview->update();
+    }
 }
 
 void VideoWindow::prev_frame()
 {
-	if (frame_index > 0) {
-	    frame_index -= 1;
-		auto vframe = vreader->get_frame(frame_index);
-		fviewer->display_frame(vframe);
-		auto fnum_str = utils::make_framecount_string(frame_index);
-		framenum_label->setText(fnum_str.c_str());
-		fview->update();
-	}
+    if (frame_index > 0) {
+        frame_index -= 1;
+        auto vframe = vreader->get_frame(frame_index);
+        fviewer->display_frame(vframe);
+        auto fnum_str = utils::make_framecount_string(frame_index);
+        framenum_label->setText(fnum_str.c_str());
+        fview->update();
+    }
 }
 
 void VideoWindow::closeEvent(QCloseEvent *evt)
@@ -180,7 +212,14 @@ void VideoWindow::apply_video_offset()
     int64_t frame_offset = static_cast<int64_t>(offset_in_sec * vreader->get_video_fps());
     std::cout << "H: " << hour_offset << ", M: " << min_offset << ", S: " << sec_offset << std::endl;
     auto vframe = vreader->get_frame(frame_offset);
-	fviewer->display_frame(vframe);
+    fviewer->display_frame(vframe);
+}
+
+
+void VideoWindow::adjust_paintbrush_size()
+{
+    auto brushsz = ql_paintsz->text().toInt();
+    fviewer->set_brushsz(brushsz);
 }
 
 #if 0

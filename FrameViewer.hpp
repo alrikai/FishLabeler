@@ -24,6 +24,10 @@ public:
         return sz; 
     }
 
+    void set_brushsz(int brushsz) {
+        annotation_brushsz = brushsz;
+    }
+
 protected slots:
     void drawBackground(QPainter* painter, const QRectF &rect) override;
     void drawForeground(QPainter* painter, const QRectF &rect) override;
@@ -40,7 +44,9 @@ private:
     std::vector<QPoint> drawn_points;
 
     QGraphicsTextItem cursor;
+    int annotation_brushsz;
 };
+
 
 
 class FrameView : public QGraphicsView

@@ -10,6 +10,8 @@
 #include <QLabel>
 #include <QPushButton>
 #include <QWidget>
+#include <QHBoxLayout>
+#include <QVBoxLayout>
 
 #include "VideoReader.hpp"
 #include "FrameViewer.hpp"
@@ -22,6 +24,7 @@ public:
     
 protected:
     void closeEvent(QCloseEvent *evt) override;
+    void keyPressEvent(QKeyEvent *evt) override;
 /*
 private slots:
     void newFile();
@@ -33,9 +36,12 @@ private slots:
 */
 private:
 	void init_window();
+    void set_cfgUI_layout(QHBoxLayout* layout);
 	void next_frame();
 	void prev_frame();
+
     void apply_video_offset();
+    void adjust_paintbrush_size();
 
     //TODO: figure out if Qt manages the lifetime, or if I do...
 	std::shared_ptr<FrameViewer> fviewer;
@@ -52,7 +58,9 @@ private:
     QLineEdit* ql_sec;
     QPushButton* offset_btn;
 
-	int frame_index;
+    QLineEdit* ql_paintsz;
+	
+    int frame_index;
 	std::unique_ptr<VideoReader> vreader;
 };
 

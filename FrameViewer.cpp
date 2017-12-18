@@ -9,8 +9,9 @@ FrameViewer::FrameViewer(const VideoFrame<FrameViewer::PixelT>& initial_frame, Q
     //initialize the current frame to a placeholder
     //static const QString placeholder_path {"/home/alrik/Projects/fishlabeler/data/default_placeholder.png"};
     //current_frame = QImage(placeholder_path);
+
+    annotation_brushsz = 8;
     display_frame(initial_frame);
-    this->update();
 }
 
 void FrameViewer::display_frame(const VideoFrame<FrameViewer::PixelT>& frame) {
@@ -33,7 +34,7 @@ void FrameViewer::drawBackground(QPainter* painter, const QRectF &rect)
 void FrameViewer::drawForeground(QPainter* painter, const QRectF &rect)
 {
     QPen pen;
-    pen.setWidth(8);
+    pen.setWidth(annotation_brushsz);
     //pen.setBrush(Qt::lightGray);
     pen.setBrush(Qt::red);
     painter->setPen(pen);   
