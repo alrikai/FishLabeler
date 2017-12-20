@@ -2,6 +2,7 @@
 #include <string>
 
 #include <QTimer>
+#include <QFileDialog>
 
 #include "VideoWindow.hpp"
 
@@ -15,7 +16,13 @@ VideoWindow::VideoWindow(QWidget *parent)
     : QMainWindow(parent)
 {
     //TODO: eventually, will want to load this from the UI
-    const std::string vpath {"/home/alrik/Data/NRTFish/20130117144639.mts"};
+    //const std::string vpath {"/home/alrik/Data/NRTFish/20130117144639.mts"};
+    auto filename = QFileDialog::getOpenFileName(this,
+    tr("Open Fish Video"), QDir::currentPath(), tr("Video Files (*.mts *.mpeg *.avi)"));
+
+    const std::string vpath = filename.toStdString(); 
+   
+
     vreader = std::make_unique<VideoReader> (vpath);
     auto initial_frame = vreader->get_next_frame();
 
@@ -35,6 +42,7 @@ VideoWindow::VideoWindow(QWidget *parent)
     fviewer = std::make_shared<FrameViewer>(initial_frame, main_window);
     init_window();
 
+    //TODO: for whatever reason, this causes a memory leak until the frame is cycled. No idea why though
     //resizes the screen s.t. the frame fits well
     QTimer::singleShot(100, this, SLOT(showFullScreen()));
 }
@@ -67,10 +75,8 @@ void VideoWindow::init_window()
         adjust_paintbrush_size();
     });
 
-
+    //set up the layout for all the configuration items
     set_cfgUI_layout(cfg_layout);
-
-
 
     auto metadata_textlabel = new QLabel(main_window);
     metadata_textlabel->setText("Frame Metadata:");
@@ -93,8 +99,9 @@ void VideoWindow::init_window()
     main_window->setWindowTitle("Fish Labeler");
 
     /* TODO: what else to add? 
-     * - keyboard listener -- left and right arrows to do the next / prev button functionality 
+     * - more hotkeys for common actions
      * - zoom in / out of the frame 
+     * - undo / redo operation for labeling
      */
 
     /* TODO: what else to do?
@@ -156,11 +163,13 @@ void VideoWindow::set_cfgUI_layout(QHBoxLayout* cfg_layout)
 void VideoWindow::keyPressEvent(QKeyEvent *evt)
 {
     switch(evt->key()) {
-        case Qt::Key_Left:
-            std::cout << "LEFT key" << std::endl;
+        case Qt::Key_N:
+            std::cout << "NEXT key" << std::endl;
+            next_frame();
             break;
-        case Qt::Key_Right:
-            std::cout << "RIGHT key" << std::endl;
+        case Qt::Key_P:
+            std::cout << "PREV key" << std::endl;
+            prev_frame();
             break;
         default:
             std::cout << "key: " << evt->key() << std::endl;

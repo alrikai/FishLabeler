@@ -9,6 +9,7 @@
 #include <QGraphicsScene>
 #include <QGraphicsTextItem>
 #include <QGraphicsSceneMouseEvent>
+#include <QWheelEvent>
 
 
 class FrameViewer : public QGraphicsScene
@@ -45,6 +46,7 @@ private:
 
     QGraphicsTextItem cursor;
     int annotation_brushsz;
+    bool drawing_annotations;
 };
 
 
@@ -62,6 +64,11 @@ public:
     QSize sizeHint() const override {
         return fviewer->get_size_hint(); 
     }
+
+protected:
+    //for zooming into the scene -- hold down control to zoom (versus just scrolling up and down)
+    void wheelEvent(QWheelEvent*) override;
+
 private:
     FrameViewer* fviewer; 
 };
