@@ -6,6 +6,21 @@
 
 #include "VideoWindow.hpp"
 
+
+/* TODO: what else to add to the UI? 
+ * - more hotkeys for common actions
+ * - top toolbar for save, exit, and maybe a help bar (for hotkeys)
+ */
+
+/* TODO: what else to do?
+ * - proper video seeking -- doesn't to work currently
+ * - ability to use weak labels to jump to specified events (i.e. if we do weak labeleing that there's a fish in a frame, 
+ *      then we should have a mode that'll just look at the +- 1 sec around the 'fish in the scene' times.
+ * - make image scroll times faster
+ * - make mouse capture times for annotations faster
+ * - saving anootations out to disk along with the frame
+ */
+
 namespace utils {
     inline std::string make_framecount_string(const int findex) {
         return std::string {"Frame #: " + std::to_string(findex)};
@@ -98,20 +113,6 @@ void VideoWindow::init_window()
     main_window->setLayout(main_layout);
     main_window->setWindowTitle("Fish Labeler");
 
-    /* TODO: what else to add? 
-     * - more hotkeys for common actions
-     * - zoom in / out of the frame 
-     * - undo / redo operation for labeling
-     */
-
-    /* TODO: what else to do?
-     * - proper video seeking -- doesn't seem to work currently
-     * - ability to use weak labels to jump to specified events (i.e. if we do weak labeleing that there's a fish in a frame, 
-     *      then we should have a mode that'll just look at the +- 1 sec around the 'fish in the scene' times.
-     * - make image scroll times faster
-     * - make mouse capture times for annotations faster
-     */
-
 }
 
 void VideoWindow::set_cfgUI_layout(QHBoxLayout* cfg_layout)
@@ -183,7 +184,7 @@ void VideoWindow::next_frame()
 {
     if (frame_index < vreader->get_num_frames()) {
         auto vframe = vreader->get_next_frame();
-        fviewer->display_frame(vframe);
+        fview->update_frame(vframe);
         frame_index += 1;
         auto fnum_str = utils::make_framecount_string(frame_index);
         framenum_label->setText(fnum_str.c_str());
@@ -196,7 +197,7 @@ void VideoWindow::prev_frame()
     if (frame_index > 0) {
         frame_index -= 1;
         auto vframe = vreader->get_frame(frame_index);
-        fviewer->display_frame(vframe);
+        fview->update_frame(vframe);
         auto fnum_str = utils::make_framecount_string(frame_index);
         framenum_label->setText(fnum_str.c_str());
         fview->update();
@@ -221,7 +222,7 @@ void VideoWindow::apply_video_offset()
     int64_t frame_offset = static_cast<int64_t>(offset_in_sec * vreader->get_video_fps());
     std::cout << "H: " << hour_offset << ", M: " << min_offset << ", S: " << sec_offset << std::endl;
     auto vframe = vreader->get_frame(frame_offset);
-    fviewer->display_frame(vframe);
+    fview->update_frame(vframe);
 }
 
 

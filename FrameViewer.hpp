@@ -27,6 +27,7 @@ public:
 
     void set_brushsz(int brushsz) {
         annotation_brushsz = brushsz;
+        this->update();
     }
 
 protected slots:
@@ -35,12 +36,17 @@ protected slots:
     void mouseMoveEvent(QGraphicsSceneMouseEvent*) override;
     void mousePressEvent(QGraphicsSceneMouseEvent*) override;
     void mouseReleaseEvent(QGraphicsSceneMouseEvent*) override;
+    void keyPressEvent(QKeyEvent *evt) override;
 
 private:
+    void undo_label();
+    void redo_label();
+
     QImage current_frame;
 
     //the (float) coords of the mouse position as the user draws things
     std::vector<QPointF> new_points;
+    std::vector<QPointF> limbo_points;
     //the (accumulated) pixel coords on the frame that the user has drawn
     std::vector<QPoint> drawn_points;
 
@@ -63,6 +69,13 @@ public:
 
     QSize sizeHint() const override {
         return fviewer->get_size_hint(); 
+    }
+
+    void update_frame(const VideoFrame<FrameViewer::PixelT>& frame) {
+        //re-set any viewing transformations
+        resetMatrix();
+
+        fviewer->display_frame(frame);
     }
 
 protected:

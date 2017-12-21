@@ -25,33 +25,26 @@ public:
 protected:
     void closeEvent(QCloseEvent *evt) override;
     void keyPressEvent(QKeyEvent *evt) override;
-/*
-private slots:
-    void newFile();
-    void open();
-    bool save();
-    bool saveAs();
-    void about();
-    void documentWasModified();
-*/
+
 private:
-	void init_window();
+    void init_window();
     void set_cfgUI_layout(QHBoxLayout* layout);
-	void next_frame();
-	void prev_frame();
+    void next_frame();
+    void prev_frame();
 
     void apply_video_offset();
     void adjust_paintbrush_size();
 
     //TODO: figure out if Qt manages the lifetime, or if I do...
-	std::shared_ptr<FrameViewer> fviewer;
-	QGraphicsView* fview; 
+    std::shared_ptr<FrameViewer> fviewer;
+    //QGraphicsView* fview; 
+    FrameView* fview;
 
-	QWidget* main_window;
-	QPlainTextEdit* metadata_edit;
-	QPushButton* prev_btn; 
-	QPushButton* next_btn; 
-	QLabel* framenum_label;
+    QWidget* main_window;
+    QPlainTextEdit* metadata_edit;
+    QPushButton* prev_btn; 
+    QPushButton* next_btn; 
+    QLabel* framenum_label;
 
     QLineEdit* ql_hour;
     QLineEdit* ql_min;
@@ -59,9 +52,9 @@ private:
     QPushButton* offset_btn;
 
     QLineEdit* ql_paintsz;
-	
+    
     int frame_index;
-	std::unique_ptr<VideoReader> vreader;
+    std::unique_ptr<VideoReader> vreader;
 };
 
 #endif
