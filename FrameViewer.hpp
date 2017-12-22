@@ -56,7 +56,6 @@ private:
 };
 
 
-
 class FrameView : public QGraphicsView
 {
 public:
@@ -74,7 +73,6 @@ public:
     void update_frame(const VideoFrame<FrameViewer::PixelT>& frame) {
         //re-set any viewing transformations
         resetMatrix();
-
         fviewer->display_frame(frame);
     }
 

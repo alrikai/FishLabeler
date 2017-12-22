@@ -3,6 +3,10 @@
 #include <stdexcept>
 #include <iostream>
 
+extern "C" {
+#include <libavutil/time.h>
+}
+
 namespace utils {
     int open_codec_context(AVFormatContext*& fmt_ctx, AVCodecContext*& dec_ctx, const AVMediaType type)
     {
@@ -48,7 +52,7 @@ void VideoReader::intialize_ffmpeg()
     //TODO: can change these as needed, if we need a specific output dimension
     const int width = av_params.video_dec_ctx->width;
     const int height = av_params.video_dec_ctx->height;
-    constexpr AVPixelFormat pix_format = AV_PIX_FMT_RGB24; //BGR24;
+    constexpr AVPixelFormat pix_format = AV_PIX_FMT_RGB24;
     av_params.img_transform = sws_getCachedContext(
         nullptr, av_params.video_dec_ctx->width, av_params.video_dec_ctx->height, av_params.video_dec_ctx->pix_fmt,
         width, height, pix_format, SWS_BICUBIC, nullptr, nullptr, nullptr);
@@ -56,51 +60,70 @@ void VideoReader::intialize_ffmpeg()
         std::string err_msg {"ERROR: couldn't get sws context"};
         throw std::runtime_error(err_msg);
     }
-    av_params.video_time_base = av_q2d (av_params.video_stream->time_base); //(AV_TIME_BASE * av_params.video_dec_ctx->time_base.num) / av_params.video_dec_ctx->time_base.den;
+
+    //TODO: need to compute the time base for the video stream
+
+    av_params.video_time_base = av_params.fmt_ctx->streams[av_params.video_stream_idx]->time_base; 
     std::cout << "output: " << height << " x " << width << " @ " << av_get_pix_fmt_name(pix_format) << std::endl;
     //will write the input information (to stderr)
     av_dump_format(av_params.fmt_ctx, 0, vpath.c_str(), 0);
 }
 
-VideoFrame<VideoReader::PixelT> VideoReader::read_video_frames(const int frame_index)
+VideoFrame<VideoReader::PixelT> VideoReader::read_video_frames(const int frame_index, const bool read_fwd)
 {
     //in theory, if we just access in-order through the video, we won't need to seek at all; also, 
     //if we *do* jump around, but it's all within the frame cache, then we also don't need to seek,
     //but we on;y get to here if there was a cache miss (in which case, we only have to check if the 
     //requested frame is the next frame) 
-    bool need_to_seek = frame_index != current_frame_idx;
-    if (need_to_seek) {
-        std::cout << "seeking in video " << current_frame_idx << " --> " << frame_index << std::endl;
-        //get the time-adjusted frame index
-        int64_t seek_frame_index = frame_index * av_params.video_time_base;
-        //if(av_seek_frame(av_params.fmt_ctx, -1, seek_frame_index, AVSEEK_FLAG_ANY) < 0) {
-        if(av_seek_frame(av_params.fmt_ctx, -1, seek_frame_index, AVSEEK_FLAG_BACKWARD) < 0) {
-            std::string err_msg {"ERROR: couldn't seek to frame " + std::to_string(seek_frame_index)};
-            throw std::runtime_error(err_msg);
+    av_params.need_to_seek = frame_index != current_frame_idx;
+    if (read_fwd) {
+        if (av_params.need_to_seek) {
+            auto pos = (av_gettime() - av_params.video_current_pts_time) / 1000000.f;
+            auto spos = pos + frame_index;
+            auto seek_pos = spos * AV_TIME_BASE;
+            seek_pos = av_rescale_q (seek_pos, AV_TIME_BASE_Q, av_params.video_time_base);
+            av_params.last_seek_pos = seek_pos;
+
+            //get the time-adjusted frame index
+            int64_t seek_frame_index = seek_pos; //frame_index * av_params.video_time_base;
+            //if(av_seek_frame(av_params.fmt_ctx, -1, seek_frame_index, AVSEEK_FLAG_ANY) < 0) {
+            //if(av_seek_frame(av_params.fmt_ctx, av_params.video_stream_idx, seek_frame_index, AVSEEK_FLAG_BACKWARD) < 0) {
+            if(avformat_seek_file(av_params.fmt_ctx, av_params.video_stream_idx, INT64_MIN, seek_frame_index, INT64_MAX, AVSEEK_FLAG_ANY) < 0) {
+                std::string err_msg {"ERROR: couldn't seek to frame " + std::to_string(seek_frame_index)};
+                throw std::runtime_error(err_msg);
+            }
+
+            //TODO: the above seeks to the nearest prior keyframe, need to still move it along to the actual target frame 
+            //the question is, how do we get the frame number?
         }
-
-        //TODO: the above seeks to the nearest prior keyframe, need to still move it along to the actual target frame 
-        //the question is, how do we get the frame number?
-
-
+    } else {
+        //TODO: need to seek back VFRAME_CACHE_SIZE #frames from the requested frame, then read forward until we get to the right frame index,
+        //then read forwards by VFRAME_CACHE_SIZE #frames
     }
-
 
     //TODO: need to consider different caching approaches -- here we always read the new frames in starting at 
     //the 0th index, but if we have a large cache (i.e. larger than the #frames read each time), then it would 
     //be better to have a more intelligent scheme for reading the frames --> need to experiment some more, and this
     //function is where the different caching policies could be tried out
-    static constexpr int NREAD_FRAMES = 16;
-    int num_frames_read = parse_video(frame_index, NREAD_FRAMES);
+    static constexpr int NREAD_FRAMES = VFRAME_CACHE_SIZE;
+
+    //NOTE: we need to swap our fwd and backward cache indices
+    //TODO: have some check that we are enforcing that the backward cache is indeed filled with lower frame indices than the fwd cache
+    fwd_cache_idx = 1 - fwd_cache_idx; 
+    //set the cache index according to the direction to read from
+    const int cache_idx = read_fwd ? fwd_cache_idx : 1-fwd_cache_idx;
+    int num_frames_read = parse_video(frame_index, NREAD_FRAMES, cache_idx);
     assert(num_frames_read > 0);
     if (num_frames_read < NREAD_FRAMES) {
         //NOTE: this should be indicative of us being at the end of the video?
         std::cout << "NOTE: read " << num_frames_read << " out of requested " << NREAD_FRAMES << " #frames" << std::endl;
     }
-    return frame_cache[0];
+
+    //TODO: if we are reading backwards, do we need to return the 1st or last index?
+    return frame_cache[cache_idx][0];
 }
 
-int VideoReader::parse_video(const int base_frame_index, const int num_read_frames)
+int VideoReader::parse_video(const int base_frame_index, const int num_read_frames, const int cache_index)
 {
     av_params.frame = av_frame_alloc();
     av_params.RGB_frame = av_frame_alloc();
@@ -134,8 +157,8 @@ int VideoReader::parse_video(const int base_frame_index, const int num_read_fram
 
         if (got_frame) {
             //TODO: I should probably have some more intelligent caching scheme. Can (should?) experiment with this some more
-            frame_cache[nframes_read] = VideoFrame<PixelT>(fdata, av_params.RGB_frame->height, av_params.RGB_frame->width);
-            frame_cache_idxmap[nframes_read] = base_frame_index + nframes_read;
+            frame_cache[cache_index][nframes_read] = VideoFrame<PixelT>(fdata, av_params.RGB_frame->height, av_params.RGB_frame->width);
+            frame_cache_idxmap[cache_index][nframes_read] = base_frame_index + nframes_read;
             nframes_read++;
         }
 
@@ -153,8 +176,8 @@ int VideoReader::parse_video(const int base_frame_index, const int num_read_fram
     if (nframes_read < num_read_frames) {
         do {
             auto fdata = decode_frame<PixelT>();
-            frame_cache[nframes_read] = VideoFrame<PixelT>(fdata, av_params.RGB_frame->height, av_params.RGB_frame->width);
-            frame_cache_idxmap[nframes_read] = base_frame_index + nframes_read;
+            frame_cache[cache_index][nframes_read] = VideoFrame<PixelT>(fdata, av_params.RGB_frame->height, av_params.RGB_frame->width);
+            frame_cache_idxmap[cache_index][nframes_read] = base_frame_index + nframes_read;
             nframes_read++;
             got_frame = fdata != nullptr;
             std::cout << "Flushing Cached Frames" << std::endl;
@@ -175,16 +198,20 @@ inline char* ffav_err2str(int errnum)
 }
 }
 
-
-
-bool VideoReader::decode_packet()
+bool VideoReader::decode_packet(int decode_call_index)
 {
+    static constexpr int NUM_DECODE_RETRIES = 10;
+    bool at_target_frame = false;
     int ret = avcodec_send_packet(av_params.video_dec_ctx, &av_params.pkt);
     // In particular, we don't expect AVERROR(EAGAIN), because we read all
     // decoded frames with avcodec_receive_frame() until done.
     if (ret < 0) {
         fprintf(stderr, "NOTE: decode_packet1 ret w/ code: %s -- %d\n", ffutils::ffav_err2str(ret), int(ret == AVERROR_EOF));
-        return decode_packet();
+        if (decode_call_index < NUM_DECODE_RETRIES) {
+            return decode_packet(decode_call_index + 1);
+        } else {
+            return false;
+        }
     }
     ret = avcodec_receive_frame(av_params.video_dec_ctx, av_params.frame);
     if (ret < 0 && ret != AVERROR(EAGAIN) && ret != AVERROR_EOF) {
@@ -192,7 +219,11 @@ bool VideoReader::decode_packet()
         return false;
     }
     if (ret >= 0) {
-       return true; 
+        av_params.video_current_pts = av_params.frame->pts;
+        av_params.video_current_pts_time = av_gettime();
+        auto seek_diff = av_params.last_seek_pos - av_params.video_current_pts;
+        std::cout << "frame pkt seek time delta: " << seek_diff << " @ TS: " << av_params.video_current_pts_time << std::endl;
+        return true; 
     }
     fprintf(stderr, "NOTE: decode_packet1 ret w/ code: %s\n", ffutils::ffav_err2str(ret));
     return false;

@@ -5,6 +5,7 @@
 
 #include "VideoWindow.hpp"
 
+#if 0
 int main(int argc, char *argv[])
 {
     //Q_INIT_RESOURCE(application);
@@ -29,7 +30,10 @@ int main(int argc, char *argv[])
     return app.exec();
 }
 
-/*
+#else
+
+#include <opencv2/opencv.hpp>
+
 int main() {
     const std::string vpath {"/home/alrik/Data/NRTFish/20130117144639.mts"};
     VideoReader vreader {vpath};
@@ -39,23 +43,31 @@ int main() {
         auto vframe = vreader.get_next_frame();
         std::cout << "vf " << i << ": [" << vframe.height << " x " << vframe.width << "]" << std::endl;
         cv::Mat cv_frame (vframe.height, vframe.width, CV_8UC3, vframe.data.get());
-        std::string fname {"vframe_" + std::to_string(i) + ".png"};
+        std::string fname {"vframe0_" + std::to_string(i) + ".png"};
         cv::imwrite(fname, cv_frame);
     }
 
-    int foffset = 30 * 60 * 60 * 4;
+    //come up w/ a time-based offset to use -- aim for the 8:48 mark (pass it in units of seconds)
+    int foffset = 8 * 60 + 43;
     auto vframe = vreader.get_frame(foffset);
     std::string fname {"vframe_" + std::to_string(20) + ".png"};
     for (int i = 0; i < 10; i++) {
         auto vframe = vreader.get_next_frame();
         std::cout << "vf " << foffset + i << ": [" << vframe.height << " x " << vframe.width << "]" << std::endl;
         cv::Mat cv_frame (vframe.height, vframe.width, CV_8UC3, vframe.data.get());
-        std::string fname {"vframe_" + std::to_string(foffset+i) + ".png"};
+        std::string fname {"vframe1_" + std::to_string(i) + "_" + std::to_string(foffset) + ".png"};
         cv::imwrite(fname, cv_frame);
     }
 
-
+    for (int i = 0; i < 40; i++) {
+        auto vframe = vreader.get_next_frame();
+        std::cout << "vf " << i << ": [" << vframe.height << " x " << vframe.width << "]" << std::endl;
+        cv::Mat cv_frame (vframe.height, vframe.width, CV_8UC3, vframe.data.get());
+        std::string fname {"vframe2_" + std::to_string(i) + ".png"};
+        cv::imwrite(fname, cv_frame);
+    }
 
     vreader.get_cache_stats();
 }
-*/
+
+#endif

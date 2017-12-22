@@ -12,7 +12,6 @@ struct VideoFrame
     VideoFrame(T* data, const int height, const int width, const int stride) 
         : data(data), height(height), width(width), stride(stride)
     {}
- 
 
     //assume the VideFrame object takes ownership of the data
     VideoFrame(T* data, const int height, const int width) 
@@ -22,7 +21,6 @@ struct VideoFrame
     VideoFrame()
         : VideoFrame(nullptr, 0, 0)
     {}
-
 
     std::shared_ptr<T> data;
     int height;

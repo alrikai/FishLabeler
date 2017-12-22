@@ -37,7 +37,6 @@ private:
 
     //TODO: figure out if Qt manages the lifetime, or if I do...
     std::shared_ptr<FrameViewer> fviewer;
-    //QGraphicsView* fview; 
     FrameView* fview;
 
     QWidget* main_window;
