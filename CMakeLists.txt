@@ -10,7 +10,7 @@ find_package(Boost COMPONENTS filesystem REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS}) 
 
 #OpenCV
-FIND_PACKAGE(OpenCV COMPONENTS core highgui imgproc imgcodecs REQUIRED)
+FIND_PACKAGE(OpenCV COMPONENTS core highgui imgproc REQUIRED) #imgcodecs 
 include_directories(${OpenCV_INCLUDE_DIRS})
 message("OpenCV include: " ${OpenCV_INCLUDE_DIRS})
 message("OpenCV link: " ${OpenCV_LIBS})
