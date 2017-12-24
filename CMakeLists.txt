@@ -5,9 +5,9 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ggdb -std=c++14 -Wall")
 set(CMAKE_INCLUDE_CURRENT_DIR on)
 
-# link to ffmpeg
-set(FFMPEG_LIBS avdevice avformat avfilter avcodec swscale avutil)
-link_directories("/usr/lib")  
+#boost
+find_package(Boost COMPONENTS filesystem REQUIRED)
+include_directories(${Boost_INCLUDE_DIRS}) 
 
 #OpenCV
 FIND_PACKAGE(OpenCV COMPONENTS core highgui imgproc imgcodecs REQUIRED)
@@ -23,11 +23,11 @@ find_package(Qt5 COMPONENTS Core Widgets REQUIRED)
 set(SRCS VideoReader.cpp)
 set(HDRS VideoReader.hpp VideoFrame.hpp) 
 add_library(FishLabelerCore ${SRCS} ${HDRS})
-target_link_libraries(FishLabelerCore ${FFMPEG_LIBS}) # ${OpenCV_LIBS} ${LIBS})
+target_link_libraries(FishLabelerCore ${Boost_LIBRARIES}) # ${OpenCV_LIBS} ${LIBS})
 
 #make the UI application
 set(FLSRCS main.cpp VideoWindow.cpp FrameViewer.cpp)
 set(FLHDRS VideoWindow.hpp FrameViewer.hpp) 
 add_executable(FishLabeler ${FLSRCS} ${FLHDRS})
-target_link_libraries(FishLabeler FishLabelerCore ${FFMPEG_LIBS} ${OpenCV_LIBS} Qt5::Widgets) 
+target_link_libraries(FishLabeler FishLabelerCore ${Boost_LIBRARIES} ${OpenCV_LIBS} Qt5::Widgets) 
 

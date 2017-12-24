@@ -25,12 +25,7 @@ RUN apt-get -y install build-essential \
     virt-viewer \
     qtbase5-dev \
     ffmpeg \ 
-    libav-tools \
-    libavfilter-dev \ 
-    libavformat-dev \ 
-    libavcodec-dev \ 
-    libavcodec-extra \ 
-    libavdevice-dev \ 
+    libboost-all-dev \ 
     libopencv-dev  \ 
     libopencv-imgcodecs-dev
 
