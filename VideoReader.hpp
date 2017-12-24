@@ -217,7 +217,7 @@ T* VideoReader::decode_frame() {
             }
 
             if (av_params.need_to_seek) {
-                while (av_params.frame->pts < av_params.last_seek_pos || !got_frame) {
+                while (av_params.frame->pts > av_params.last_seek_pos || !got_frame) {
                     std::cout << "REDOING decode_packet: " << av_params.frame->pts << " against " << av_params.last_seek_pos << std::endl;
                     got_frame = decode_packet();
                 }

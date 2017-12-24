@@ -30,6 +30,13 @@ namespace utils {
         }
         return stream_idx;
     }
+
+    inline char* ffav_err2str(int errnum)
+    {
+        static char str[AV_ERROR_MAX_STRING_SIZE];
+        memset(str, 0, sizeof(str));
+        return av_make_error_string(str, AV_ERROR_MAX_STRING_SIZE, errnum);
+    }
 }
 
 
@@ -170,7 +177,7 @@ int VideoReader::parse_video(const int base_frame_index, const int num_read_fram
         //std::this_thread::sleep_for(frame_wait);
     }
 
-    //also have to flush the cached frames -- presumably this is only important at the end of the video though
+    //also have to flush the cached frames -- presumably this is only important at the end of the video though?
     av_params.pkt.data = nullptr;
     av_params.pkt.size = 0;
     if (nframes_read < num_read_frames) {
@@ -189,14 +196,6 @@ int VideoReader::parse_video(const int base_frame_index, const int num_read_fram
 }
 
 
-namespace ffutils {
-inline char* ffav_err2str(int errnum)
-{
-    static char str[AV_ERROR_MAX_STRING_SIZE];
-    memset(str, 0, sizeof(str));
-    return av_make_error_string(str, AV_ERROR_MAX_STRING_SIZE, errnum);
-}
-}
 
 bool VideoReader::decode_packet(int decode_call_index)
 {
@@ -206,7 +205,7 @@ bool VideoReader::decode_packet(int decode_call_index)
     // In particular, we don't expect AVERROR(EAGAIN), because we read all
     // decoded frames with avcodec_receive_frame() until done.
     if (ret < 0) {
-        fprintf(stderr, "NOTE: decode_packet1 ret w/ code: %s -- %d\n", ffutils::ffav_err2str(ret), int(ret == AVERROR_EOF));
+        fprintf(stderr, "NOTE: decode_packet1 ret w/ code: %s -- %d\n", utils::ffav_err2str(ret), int(ret == AVERROR_EOF));
         if (decode_call_index < NUM_DECODE_RETRIES) {
             return decode_packet(decode_call_index + 1);
         } else {
@@ -215,7 +214,7 @@ bool VideoReader::decode_packet(int decode_call_index)
     }
     ret = avcodec_receive_frame(av_params.video_dec_ctx, av_params.frame);
     if (ret < 0 && ret != AVERROR(EAGAIN) && ret != AVERROR_EOF) {
-        fprintf(stderr, "NOTE: decode_packet1 ret w/ code: %s\n", ffutils::ffav_err2str(ret));
+        fprintf(stderr, "NOTE: decode_packet1 ret w/ code: %s\n", utils::ffav_err2str(ret));
         return false;
     }
     if (ret >= 0) {
@@ -225,6 +224,6 @@ bool VideoReader::decode_packet(int decode_call_index)
         std::cout << "frame pkt seek time delta: " << seek_diff << " @ TS: " << av_params.video_current_pts_time << std::endl;
         return true; 
     }
-    fprintf(stderr, "NOTE: decode_packet1 ret w/ code: %s\n", ffutils::ffav_err2str(ret));
+    fprintf(stderr, "NOTE: decode_packet1 ret w/ code: %s\n", utils::ffav_err2str(ret));
     return false;
 }
