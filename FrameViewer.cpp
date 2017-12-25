@@ -29,16 +29,14 @@ FrameViewer::FrameViewer(const QImage& initial_frame, QObject* parent)
     display_frame(initial_frame);
 }
 
-void FrameViewer::display_frame(const QImage& frame) {
-    
-    //TODO: double check if the data is stored per channel, or interleaved
-    //TODO: change channel ordering to be BGR (or change ffmpeg part to be RGB)
-    //const int line_bytesz = frame.stride * 3 * sizeof(PixelT);
-    current_frame = frame; //QImage(frame.data.get(), frame.width, frame.height, line_bytesz, QImage::Format_RGB888);
-
-    new_points.clear();
+void FrameViewer::display_frame(const QImage& frame) 
+{
+	//TODO: before changing out the current frame for the new one, marshal all of its information, and (optionally) write it out to disk?
+	//Need to figure out how exactly I want to handle this part. 
+	
+    current_frame = frame; 
+    annotation_locations.clear();
     limbo_points.clear();
-
     this->update();
 }
 
@@ -54,9 +52,8 @@ void FrameViewer::drawForeground(QPainter* painter, const QRectF &rect)
     //pen.setBrush(Qt::lightGray);
     pen.setBrush(Qt::red);
     painter->setPen(pen);   
-    //TODO: need to convert the new_points to frame coordinates and write them to drawn_points
-    for (int i = 0; i < new_points.size(); i++) {
-        auto npt_loc = new_points[i];
+    for (int i = 0; i < annotation_locations.size(); i++) {
+        auto npt_loc = annotation_locations[i];
         painter->drawPoint(npt_loc.x(),npt_loc.y());
         std::cout << "drawing pt " << npt_loc.x() << ", " << npt_loc.y() << std::endl;
     }
@@ -66,7 +63,7 @@ void FrameViewer::mouseMoveEvent(QGraphicsSceneMouseEvent* mevt)
 {
     if (drawing_annotations) {
         //NOTE: could also use e.g. mevt->scenePos().x(), mevt->scenePos().y()
-        new_points.emplace_back(mevt->scenePos().x(), mevt->scenePos().y());
+        annotation_locations.emplace_back(mevt->scenePos().x(), mevt->scenePos().y());
         std::cout << "mpos: " << mevt->scenePos().x() << ", " << mevt->scenePos().y() << std::endl;
         this->update();
     }
@@ -74,7 +71,7 @@ void FrameViewer::mouseMoveEvent(QGraphicsSceneMouseEvent* mevt)
 
 void FrameViewer::mousePressEvent(QGraphicsSceneMouseEvent* mevt)
 {
-    new_points.emplace_back(mevt->scenePos().x(), mevt->scenePos().y());
+    annotation_locations.emplace_back(mevt->scenePos().x(), mevt->scenePos().y());
     std::cout << "mpos click: " << mevt->scenePos().x() << ", " << mevt->scenePos().y() << std::endl;
     drawing_annotations = true;
     this->update();
@@ -82,7 +79,7 @@ void FrameViewer::mousePressEvent(QGraphicsSceneMouseEvent* mevt)
 
 void FrameViewer::mouseReleaseEvent(QGraphicsSceneMouseEvent* mevt)
 {
-    new_points.emplace_back(mevt->scenePos().x(), mevt->scenePos().y());
+    annotation_locations.emplace_back(mevt->scenePos().x(), mevt->scenePos().y());
     std::cout << "mpos rel: " << mevt->scenePos().x() << ", " << mevt->scenePos().y() << std::endl;
     drawing_annotations = false;
     this->update();
@@ -90,13 +87,13 @@ void FrameViewer::mouseReleaseEvent(QGraphicsSceneMouseEvent* mevt)
 
 void FrameViewer::undo_label()
 {
-    utils::point_un_redo(new_points, limbo_points);
+    utils::point_un_redo(annotation_locations, limbo_points);
     this->update();
 }
 
 void FrameViewer::redo_label()
 {
-    utils::point_un_redo(limbo_points, new_points);
+    utils::point_un_redo(limbo_points, annotation_locations);
     this->update();
 }
 

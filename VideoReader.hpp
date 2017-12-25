@@ -7,9 +7,8 @@
 #include <array>
 #include <iostream>
 
-#include <QImage> 
 #include <boost/filesystem.hpp>
-
+#include <QImage> 
 
 class VideoReader
 {
@@ -30,13 +29,19 @@ public:
     QImage get_next_frame();
     QImage get_frame(const int houroffset, const int minoffset, const int secoffset);
     QImage get_frame(const int index);
+
     int get_num_frames() const {
         return files.size();
 	}
 
-	//TODO: need to parse the video info.txt file to get the FPS / other metadata
-	double get_video_fps() const {
-        return video_fps;
+    std::string get_frame_name(const int frame_index) {
+        if (frame_index < 0 || frame_index >= files.size()) {
+            std::string err_msg {"ERROR: index " + std::to_string(frame_index) + " is out of bounds"};     
+			throw std::runtime_error(err_msg);
+		}
+		auto fname = files[frame_index];
+		boost::filesystem::path p (fname);
+		return p.stem().string();
 	}
 
 	//vestige of old class, might be informative if I add caching to this one
@@ -49,7 +54,7 @@ public:
 	}
 
 	std::tuple<int, int, int> get_current_timestamp() const {
-		int foffset = static_cast<int>(frame_index / get_video_fps());
+		int foffset = static_cast<int>(frame_index / video_fps);
         int hour_offset = foffset / (60*60);
 		foffset -= hour_offset * 60*60;
 		int min_offset = foffset / 60;

@@ -28,6 +28,23 @@ public:
         this->update();
     }
 
+	int get_brushsz() const {
+        return annotation_brushsz;
+    }
+
+	int get_frame_width() const {
+        return current_frame.width(); 
+	}
+
+	int get_frame_height() const {
+        return current_frame.height(); 
+	}
+
+
+    std::vector<QPointF> get_frame_annotations() const {
+		return annotation_locations;
+	}
+
 protected slots:
     void drawBackground(QPainter* painter, const QRectF &rect) override;
     void drawForeground(QPainter* painter, const QRectF &rect) override;
@@ -40,13 +57,12 @@ private:
     void undo_label();
     void redo_label();
 
+	//hold the current frame to be / being displayed
     QImage current_frame;
 
     //the (float) coords of the mouse position as the user draws things
-    std::vector<QPointF> new_points;
+    std::vector<QPointF> annotation_locations;
     std::vector<QPointF> limbo_points;
-    //the (accumulated) pixel coords on the frame that the user has drawn
-    std::vector<QPoint> drawn_points;
 
     QGraphicsTextItem cursor;
     int annotation_brushsz;
@@ -73,6 +89,10 @@ public:
         resetMatrix();
         fviewer->display_frame(frame);
     }
+
+    std::vector<QPointF> get_frame_annotations() const {
+        return fviewer->get_frame_annotations();
+	}
 
 protected:
     //for zooming into the scene -- hold down control to zoom (versus just scrolling up and down)

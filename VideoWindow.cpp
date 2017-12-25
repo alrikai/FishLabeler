@@ -35,6 +35,8 @@ VideoWindow::VideoWindow(QWidget *parent)
     vreader = std::make_unique<VideoReader> (vpath);
     auto initial_frame = vreader->get_next_frame();
 
+    vlogger = std::make_unique<VideoLogger> (vpath);
+
     main_window = new QWidget(this);
     setCentralWidget(main_window);
     fviewer = std::make_shared<FrameViewer>(initial_frame, main_window);
@@ -157,7 +159,6 @@ void VideoWindow::keyPressEvent(QKeyEvent *evt)
             break;
         default:
             std::cout << "key: " << evt->key() << std::endl;
-
     }
         
     QWidget::keyPressEvent(evt);
@@ -168,6 +169,27 @@ void VideoWindow::next_frame()
 	const int frame_index = vreader->get_current_frame_index();
     if (frame_index < vreader->get_num_frames()) {
         auto vframe = vreader->get_next_frame();
+
+        //we want to get the frame information that is being phased out (so use old frame index)
+		auto frame_name = vreader->get_frame_name(frame_index);
+
+		//check the edit box for text
+        auto fmeta_text = metadata_edit->toPlainText().toStdString();
+        if (fmeta_text.size() > 0) {
+            vlogger->write_textmetadata(frame_name, std::move(fmeta_text));
+	        //reset the metadata text, if needed
+			metadata_edit->clear();
+		}
+
+		//check the frame viewer for annotations
+        auto fannotation = fview->get_frame_annotations();
+		if (fannotation.size() > 0) {
+			const int bsz = fviewer->get_brushsz();
+			const int fheight = fviewer->get_frame_height();
+			const int fwidth = fviewer->get_frame_width();
+            vlogger->write_annotations(frame_name, std::move(fannotation), bsz, fheight, fwidth);
+		}
+
         fview->update_frame(vframe);
         auto fnum_str = utils::make_framecount_string(frame_index+1);
         framenum_label->setText(fnum_str.c_str());
@@ -206,7 +228,9 @@ void VideoWindow::apply_video_offset()
 	//draw the frame to the UI
     fview->update_frame(vframe);
 	
-	//TODO: just a sanity check for now (might be nice to also show timestamp of current frame on the UI)
+	//TODO: just a sanity check for now...
+	//might also be nice to show timestamp of current frame on the UI when jumping like this, in which case this 
+	//information would be useful
 	auto curr_tstamp = vreader->get_current_timestamp();
 	assert(std::get<0>(curr_tstamp) == hour_offset);
 	assert(std::get<1>(curr_tstamp) == min_offset);
@@ -218,29 +242,3 @@ void VideoWindow::adjust_paintbrush_size()
     auto brushsz = ql_paintsz->text().toInt();
     fviewer->set_brushsz(brushsz);
 }
-
-#if 0
-    std::cout << "video has " << vreader.get_num_frames() << " #frames" << std::endl;
-    for (int i = 0; i < 10; i++) {
-        auto vframe = vreader.get_next_frame();
-        std::cout << "vf " << i << ": [" << vframe.height << " x " << vframe.width << "]" << std::endl;
-        cv::Mat cv_frame (vframe.height, vframe.width, CV_8UC3, vframe.data.get());
-        std::string fname {"vframe_" + std::to_string(i) + ".png"};
-        cv::imwrite(fname, cv_frame);
-    }
-
-    int foffset = 30 * 60 * 60 * 4;
-    auto vframe = vreader.get_frame(foffset);
-    std::string fname {"vframe_" + std::to_string(20) + ".png"};
-    for (int i = 0; i < 10; i++) {
-        auto vframe = vreader.get_next_frame();
-        std::cout << "vf " << foffset + i << ": [" << vframe.height << " x " << vframe.width << "]" << std::endl;
-        cv::Mat cv_frame (vframe.height, vframe.width, CV_8UC3, vframe.data.get());
-        std::string fname {"vframe_" + std::to_string(foffset+i) + ".png"};
-        cv::imwrite(fname, cv_frame);
-    }
-
-
-
-    vreader.get_cache_stats();
-#endif

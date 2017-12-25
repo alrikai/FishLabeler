@@ -15,6 +15,7 @@
 
 #include "VideoReader.hpp"
 #include "FrameViewer.hpp"
+#include "VideoLogger.hpp"
 
 class VideoWindow : public QMainWindow
 {
@@ -50,7 +51,9 @@ private:
     QLineEdit* ql_sec;
     QPushButton* offset_btn;
     QLineEdit* ql_paintsz;
+
     std::unique_ptr<VideoReader> vreader;
+    std::unique_ptr<VideoLogger> vlogger;
 };
 
 #endif

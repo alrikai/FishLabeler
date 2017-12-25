@@ -20,8 +20,8 @@ set(CMAKE_AUTOMOC ON)
 find_package(Qt5 COMPONENTS Core Widgets REQUIRED)
 
 #make the UI application
-set(FLSRCS main.cpp VideoReader.cpp VideoWindow.cpp FrameViewer.cpp)
-set(FLHDRS VideoReader.hpp VideoWindow.hpp FrameViewer.hpp) 
+set(FLSRCS main.cpp VideoReader.cpp VideoWindow.cpp FrameViewer.cpp VideoLogger.cpp)
+set(FLHDRS VideoReader.hpp VideoWindow.hpp FrameViewer.hpp VideoLogger.hpp) 
 add_executable(FishLabeler ${FLSRCS} ${FLHDRS})
 target_link_libraries(FishLabeler ${Boost_LIBRARIES} ${OpenCV_LIBS} Qt5::Widgets) 
 
