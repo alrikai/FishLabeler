@@ -8,8 +8,12 @@ if [ ! -d "$OUTPUT_DIR" ]; then
     mkdir -p "$OUTPUT_DIR"
 fi
 
-#TODO: check if there are existing frames already -- if so, then don't re-extract the video?
-ffmpeg -i "$VIDEO_PATH" -qscale:v 2 ""$OUTPUT_DIR"/%06d.jpg"
+numfiles=$(ls "$OUTPUT_DIR"/*.jpg | wc -l)
+echo "NUMFILES: $numfiles"
+#NOTE: don't re-extract frames if they already exist
+if [ "$numfiles" -eq 0 ]; then
+    ffmpeg -i "$VIDEO_PATH" -qscale:v 2 ""$OUTPUT_DIR"/%06d.jpg"
+fi
 
 #write the video metadata out to a text file for the application
 VID_INFO_LOG="$OUTPUT_DIR/info.txt"
@@ -17,5 +21,7 @@ touch "$VID_INFO_LOG"
 ffprobe -i "$VIDEO_PATH" 2>&1 | tee "$VID_INFO_LOG"
 
 #run the labeler application
-cd build
-./FishLabeler
+#cd build
+#cmake ..
+#make
+#./FishLabeler

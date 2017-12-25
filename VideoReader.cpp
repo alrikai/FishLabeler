@@ -3,6 +3,7 @@
 #include <stdexcept>
 #include <iostream>
 #include <sstream>
+#include <fstream>
 
 #include <boost/algorithm/string.hpp>  
 #include <boost/lexical_cast.hpp>
@@ -28,7 +29,8 @@ QImage VideoReader::get_frame(const int houroffset, const int minoffset, const i
 {
     //convert the timestamp to a frame index
 	const float time_offset = 60*60*houroffset + 60*minoffset + secoffset;
-	const int frame_index = static_cast<int>(std::round(time_offset * video_fps));
+	const int offset_index = static_cast<int>(std::round(time_offset * video_fps));
+    frame_index = offset_index;
 	return get_frame(frame_index);
 }
 

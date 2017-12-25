@@ -28,7 +28,6 @@ RUN apt-get -y install build-essential \
     libopencv-dev   
 
 RUN apt-get -y install qt5-default  
-RUN apt-get -y install cimg-dev
 #RUN apt-get -y install firefox  
 
 #(userid): id -u alrik --> 1000, (groupid): id -g  alrik--> 1000 (this presumably has to be changed if not the 1st user on the system?)
@@ -50,6 +49,7 @@ WORKDIR /home/NRTfish
 COPY *.cpp fishlabeler/
 COPY *.hpp fishlabeler/
 COPY CMakeLists.txt fishlabeler/
+COPY *.sh fishlabeler/
 
 # Enable additional output from Launcher
 ENV QT_VERBOSE true

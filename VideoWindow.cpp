@@ -209,17 +209,10 @@ void VideoWindow::apply_video_offset()
     auto hour_offset = ql_hour->text().toInt();
     auto min_offset = ql_min->text().toInt();
     auto sec_offset = ql_sec->text().toInt();
-
-    int64_t offset_in_sec = 60 * (60 * hour_offset + min_offset) + sec_offset; 
-    //TODO: need to ensure this is the correct FPS for the video. We will *assume* our videos
-    //are a uniform frame rate (this is not always the case, but I think we can assume this in our case)
-
-    int64_t frame_offset = static_cast<int64_t>(offset_in_sec * vreader->get_video_fps());
     std::cout << "H: " << hour_offset << ", M: " << min_offset << ", S: " << sec_offset << std::endl;
-    auto vframe = vreader->get_frame(frame_offset);
+    auto vframe = vreader->get_frame(hour_offset, min_offset, sec_offset);
     fview->update_frame(vframe);
 }
-
 
 void VideoWindow::adjust_paintbrush_size()
 {

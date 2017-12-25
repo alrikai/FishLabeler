@@ -22,7 +22,7 @@ public:
     explicit VideoReader(const std::string& filepath) 
 		: fpath(filepath), frame_index(0), video_fps(0.0)
 	{
-	    parse_video_frames();
+		parse_video_frames();
 	}
 
     QImage get_prev_frame();
