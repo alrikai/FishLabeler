@@ -13,7 +13,6 @@
  */
 
 /* TODO: what else to do?
- * - proper video seeking -- doesn't to work currently
  * - ability to use weak labels to jump to specified events (i.e. if we do weak labeleing that there's a fish in a frame, 
  *      then we should have a mode that'll just look at the +- 1 sec around the 'fish in the scene' times.
  * - make image scroll times faster
@@ -36,17 +35,6 @@ VideoWindow::VideoWindow(QWidget *parent)
     vreader = std::make_unique<VideoReader> (vpath);
     auto initial_frame = vreader->get_next_frame();
 
-    /*
-    static const QString placeholder_path {"/home/alrik/Projects/fishlabeler/data/default_placeholder.png"};
-    auto qimg = QImage(placeholder_path);
-    using PixelT = uint8_t;
-    const int img_sz = qimg.byteCount();
-    auto default_data = new PixelT [img_sz];
-    std::copy(qimg.bits(), qimg.bits() + img_sz, default_data); 
-    auto initial_frame = VideoFrame<PixelT> (default_data, qimg.height(), qimg.width());  
-    */
-
-    frame_index = 0;
     main_window = new QWidget(this);
     setCentralWidget(main_window);
     fviewer = std::make_shared<FrameViewer>(initial_frame, main_window);
@@ -61,7 +49,7 @@ void VideoWindow::init_window()
 {
     auto cfg_layout = new QHBoxLayout;
     framenum_label = new QLabel(main_window);
-    auto fnum_str = utils::make_framecount_string(frame_index);
+    auto fnum_str = utils::make_framecount_string(0);
     framenum_label->setText(fnum_str.c_str());
     prev_btn = new QPushButton("previous", main_window);
     connect(prev_btn, &QPushButton::clicked, [this]{
@@ -177,11 +165,11 @@ void VideoWindow::keyPressEvent(QKeyEvent *evt)
 
 void VideoWindow::next_frame()
 {
+	const int frame_index = vreader->get_current_frame_index();
     if (frame_index < vreader->get_num_frames()) {
         auto vframe = vreader->get_next_frame();
         fview->update_frame(vframe);
-        frame_index += 1;
-        auto fnum_str = utils::make_framecount_string(frame_index);
+        auto fnum_str = utils::make_framecount_string(frame_index+1);
         framenum_label->setText(fnum_str.c_str());
         fview->update();
     }
@@ -189,11 +177,11 @@ void VideoWindow::next_frame()
 
 void VideoWindow::prev_frame()
 {
+	const int frame_index = vreader->get_current_frame_index();
     if (frame_index > 0) {
-        frame_index -= 1;
-        auto vframe = vreader->get_frame(frame_index);
+        auto vframe = vreader->get_prev_frame();
         fview->update_frame(vframe);
-        auto fnum_str = utils::make_framecount_string(frame_index);
+        auto fnum_str = utils::make_framecount_string(frame_index-1);
         framenum_label->setText(fnum_str.c_str());
         fview->update();
     }
@@ -211,7 +199,18 @@ void VideoWindow::apply_video_offset()
     auto sec_offset = ql_sec->text().toInt();
     std::cout << "H: " << hour_offset << ", M: " << min_offset << ", S: " << sec_offset << std::endl;
     auto vframe = vreader->get_frame(hour_offset, min_offset, sec_offset);
+	//upate the current frame index
+	auto curr_fidx = vreader->get_current_frame_index();
+	auto fnum_str = utils::make_framecount_string(curr_fidx);
+    framenum_label->setText(fnum_str.c_str());
+	//draw the frame to the UI
     fview->update_frame(vframe);
+	
+	//TODO: just a sanity check for now (might be nice to also show timestamp of current frame on the UI)
+	auto curr_tstamp = vreader->get_current_timestamp();
+	assert(std::get<0>(curr_tstamp) == hour_offset);
+	assert(std::get<1>(curr_tstamp) == min_offset);
+	assert(std::abs(std::get<2>(curr_tstamp) - sec_offset) <= 1);
 }
 
 void VideoWindow::adjust_paintbrush_size()

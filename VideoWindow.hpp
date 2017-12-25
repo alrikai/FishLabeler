@@ -49,10 +49,7 @@ private:
     QLineEdit* ql_min;
     QLineEdit* ql_sec;
     QPushButton* offset_btn;
-
     QLineEdit* ql_paintsz;
-    
-    int frame_index;
     std::unique_ptr<VideoReader> vreader;
 };
 

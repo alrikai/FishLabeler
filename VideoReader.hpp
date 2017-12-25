@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <array>
+#include <iostream>
 
 #include <QImage> 
 #include <boost/filesystem.hpp>
@@ -42,6 +43,21 @@ public:
 	float get_cache_stats() const {
         return 0;
 	} 
+
+	int get_current_frame_index() const {
+        return frame_index;
+	}
+
+	std::tuple<int, int, int> get_current_timestamp() const {
+		int foffset = static_cast<int>(frame_index / get_video_fps());
+        int hour_offset = foffset / (60*60);
+		foffset -= hour_offset * 60*60;
+		int min_offset = foffset / 60;
+		foffset -= min_offset*60;
+		int sec_offset = foffset;
+		std::cout << "Frame Offset: " << frame_index << " --> H: " << hour_offset << " M: " << min_offset << " S: " << sec_offset << std::endl; 
+		return std::make_tuple(hour_offset, min_offset, sec_offset);
+	}
 
 private:
 	void parse_video_frames();
