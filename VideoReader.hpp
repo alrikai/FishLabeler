@@ -6,9 +6,9 @@
 #include <vector>
 #include <array>
 
+#include <QImage> 
 #include <boost/filesystem.hpp>
 
-#include "VideoFrame.hpp"
 
 class VideoReader
 {
@@ -20,22 +20,22 @@ public:
 
 	//TODO: need some way of getting the accurate frame rate, so we can convert from timestamps to frame indices
     explicit VideoReader(const std::string& filepath) 
-		: fpath(filepath), frame_index(0)
+		: fpath(filepath), frame_index(0), video_fps(0.0)
 	{
 	    parse_video_frames();
 	}
 
-    VideoFrame<PixelT> get_prev_frame();
-    VideoFrame<PixelT> get_next_frame();
-    VideoFrame<PixelT> get_frame(const int houroffset, const int minoffset, const int secoffset);
-    VideoFrame<PixelT> get_frame(const int index);
+    QImage get_prev_frame();
+    QImage get_next_frame();
+    QImage get_frame(const int houroffset, const int minoffset, const int secoffset);
+    QImage get_frame(const int index);
     int get_num_frames() const {
         return files.size();
 	}
 
 	//TODO: need to parse the video info.txt file to get the FPS / other metadata
-	float get_video_fps() const {
-        return 0;
+	double get_video_fps() const {
+        return video_fps;
 	}
 
 	//vestige of old class, might be informative if I add caching to this one
@@ -49,6 +49,7 @@ private:
 	const std::string fpath;
 	int frame_index;
     std::vector<std::string> files;
+	double video_fps;
 };
 
 #endif

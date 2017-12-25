@@ -2,8 +2,6 @@
 #define FISHLABELER_FRAMEVIEWER_HPP
 
 #include <QWidget>
-#include "VideoFrame.hpp"
-
 #include <QObject>
 #include <QGraphicsView>
 #include <QGraphicsScene>
@@ -16,9 +14,9 @@ class FrameViewer : public QGraphicsScene
 {
 public:
     using PixelT = uint8_t;
-    FrameViewer(const VideoFrame<PixelT>& initial_frame, QObject *parent = 0);
+    FrameViewer(const QImage& initial_frame, QObject *parent = 0);
 
-    void display_frame(const VideoFrame<PixelT>& frame);
+    void display_frame(const QImage& frame);
 
     QSize get_size_hint() const {
         QSize sz{current_frame.width(), current_frame.height()};
@@ -70,7 +68,7 @@ public:
         return fviewer->get_size_hint(); 
     }
 
-    void update_frame(const VideoFrame<FrameViewer::PixelT>& frame) {
+    void update_frame(const QImage& frame) {
         //re-set any viewing transformations
         resetMatrix();
         fviewer->display_frame(frame);

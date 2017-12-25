@@ -30,14 +30,9 @@ namespace utils {
 VideoWindow::VideoWindow(QWidget *parent)
     : QMainWindow(parent)
 {
-    //TODO: eventually, will want to load this from the UI
-    //const std::string vpath {"/home/alrik/Data/NRTFish/20130117144639.mts"};
-    auto filename = QFileDialog::getOpenFileName(this,
-    tr("Open Fish Video"), QDir::currentPath(), tr("Video Files (*.mts *.mpeg *.avi)"));
-
+    auto filename = QFileDialog::getExistingDirectory(this, 
+    tr("Open Fish Video Frame Directory"), QDir::currentPath(), QFileDialog::ShowDirsOnly);
     const std::string vpath = filename.toStdString(); 
-   
-
     vreader = std::make_unique<VideoReader> (vpath);
     auto initial_frame = vreader->get_next_frame();
 

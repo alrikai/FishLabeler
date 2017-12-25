@@ -17,7 +17,7 @@ namespace utils {
     }
 }
 
-FrameViewer::FrameViewer(const VideoFrame<FrameViewer::PixelT>& initial_frame, QObject* parent)
+FrameViewer::FrameViewer(const QImage& initial_frame, QObject* parent)
     : QGraphicsScene(parent) 
 {
     //initialize the current frame to a placeholder
@@ -29,12 +29,12 @@ FrameViewer::FrameViewer(const VideoFrame<FrameViewer::PixelT>& initial_frame, Q
     display_frame(initial_frame);
 }
 
-void FrameViewer::display_frame(const VideoFrame<FrameViewer::PixelT>& frame) {
+void FrameViewer::display_frame(const QImage& frame) {
     
     //TODO: double check if the data is stored per channel, or interleaved
     //TODO: change channel ordering to be BGR (or change ffmpeg part to be RGB)
-    const int line_bytesz = frame.stride * 3 * sizeof(PixelT);
-    current_frame = QImage(frame.data.get(), frame.width, frame.height, line_bytesz, QImage::Format_RGB888);
+    //const int line_bytesz = frame.stride * 3 * sizeof(PixelT);
+    current_frame = frame; //QImage(frame.data.get(), frame.width, frame.height, line_bytesz, QImage::Format_RGB888);
 
     new_points.clear();
     limbo_points.clear();

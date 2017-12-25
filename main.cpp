@@ -5,7 +5,7 @@
 
 #include "VideoWindow.hpp"
 
-#if 0
+#if 1
 int main(int argc, char *argv[])
 {
     //Q_INIT_RESOURCE(application);

@@ -19,15 +19,9 @@ message("OpenCV link: " ${OpenCV_LIBS})
 set(CMAKE_AUTOMOC ON)
 find_package(Qt5 COMPONENTS Core Widgets REQUIRED)
 
-#make the video reading library
-set(SRCS VideoReader.cpp)
-set(HDRS VideoReader.hpp VideoFrame.hpp) 
-add_library(FishLabelerCore ${SRCS} ${HDRS})
-target_link_libraries(FishLabelerCore ${Boost_LIBRARIES}) # ${OpenCV_LIBS} ${LIBS})
-
 #make the UI application
-set(FLSRCS main.cpp VideoWindow.cpp FrameViewer.cpp)
-set(FLHDRS VideoWindow.hpp FrameViewer.hpp) 
+set(FLSRCS main.cpp VideoReader.cpp VideoWindow.cpp FrameViewer.cpp)
+set(FLHDRS VideoReader.hpp VideoWindow.hpp FrameViewer.hpp) 
 add_executable(FishLabeler ${FLSRCS} ${FLHDRS})
-target_link_libraries(FishLabeler FishLabelerCore ${Boost_LIBRARIES} ${OpenCV_LIBS} Qt5::Widgets) 
+target_link_libraries(FishLabeler ${Boost_LIBRARIES} ${OpenCV_LIBS} Qt5::Widgets) 
 
