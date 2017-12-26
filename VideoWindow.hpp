@@ -45,6 +45,9 @@ private:
     QPushButton* prev_btn; 
     QPushButton* next_btn; 
     QLabel* framenum_label;
+    QLabel* hour_timestamp;
+    QLabel* min_timestamp;
+    QLabel* sec_timestamp;
 
     QLineEdit* ql_hour;
     QLineEdit* ql_min;

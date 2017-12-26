@@ -53,6 +53,14 @@ void VideoWindow::init_window()
     framenum_label = new QLabel(main_window);
     auto fnum_str = utils::make_framecount_string(0);
     framenum_label->setText(fnum_str.c_str());
+
+    hour_timestamp = new QLabel(main_window);
+    hour_timestamp->setText("hour: 0");
+    min_timestamp = new QLabel(main_window);
+    min_timestamp->setText("min: 0");
+    sec_timestamp = new QLabel(main_window);
+    sec_timestamp->setText("sec: 0");
+
     prev_btn = new QPushButton("previous", main_window);
     connect(prev_btn, &QPushButton::clicked, [this]{
         prev_frame();
@@ -130,7 +138,10 @@ void VideoWindow::set_cfgUI_layout(QHBoxLayout* cfg_layout)
     ql_paintsz_txt->setMaximumWidth(2*max_offset_text_width);
 
     cfg_layout->addWidget(framenum_label);
-
+    cfg_layout->addWidget(hour_timestamp);
+    cfg_layout->addWidget(min_timestamp);
+    cfg_layout->addWidget(sec_timestamp);
+   
     cfg_layout->addWidget(ql_paintsz_txt);
     cfg_layout->addWidget(ql_paintsz);
 
@@ -166,40 +177,50 @@ void VideoWindow::keyPressEvent(QKeyEvent *evt)
 
 void VideoWindow::next_frame()
 {
-	const int frame_index = vreader->get_current_frame_index();
+    const int frame_index = vreader->get_current_frame_index();
     if (frame_index < vreader->get_num_frames()) {
         auto vframe = vreader->get_next_frame();
 
         //we want to get the frame information that is being phased out (so use old frame index)
-		auto frame_name = vreader->get_frame_name(frame_index);
+        auto frame_name = vreader->get_frame_name(frame_index);
 
-		//check the edit box for text
+        //check the edit box for text
         auto fmeta_text = metadata_edit->toPlainText().toStdString();
         if (fmeta_text.size() > 0) {
             vlogger->write_textmetadata(frame_name, std::move(fmeta_text));
-	        //reset the metadata text, if needed
-			metadata_edit->clear();
-		}
+            //reset the metadata text, if needed
+            metadata_edit->clear();
+        }
 
-		//check the frame viewer for annotations
+        //check the frame viewer for annotations
         auto fannotation = fview->get_frame_annotations();
-		if (fannotation.size() > 0) {
-			const int bsz = fviewer->get_brushsz();
-			const int fheight = fviewer->get_frame_height();
-			const int fwidth = fviewer->get_frame_width();
+        if (fannotation.size() > 0) {
+            const int bsz = fviewer->get_brushsz();
+            const int fheight = fviewer->get_frame_height();
+            const int fwidth = fviewer->get_frame_width();
             vlogger->write_annotations(frame_name, std::move(fannotation), bsz, fheight, fwidth);
-		}
+        }
 
         fview->update_frame(vframe);
         auto fnum_str = utils::make_framecount_string(frame_index+1);
         framenum_label->setText(fnum_str.c_str());
+     
+        int h_ts, m_ts, s_ts;
+        std::tie(h_ts, m_ts, s_ts) = vreader->get_current_timestamp();
+        std::string hour_ts {"hour: " + std::to_string(h_ts)};
+        hour_timestamp->setText(hour_ts.c_str());
+        std::string min_ts {"min: " + std::to_string(m_ts)};
+        min_timestamp->setText(min_ts.c_str());
+        std::string sec_ts {"sec: " + std::to_string(s_ts)};
+        sec_timestamp->setText(sec_ts.c_str());       
+        
         fview->update();
     }
 }
 
 void VideoWindow::prev_frame()
 {
-	const int frame_index = vreader->get_current_frame_index();
+    const int frame_index = vreader->get_current_frame_index();
     if (frame_index > 0) {
         auto vframe = vreader->get_prev_frame();
         fview->update_frame(vframe);
@@ -221,20 +242,22 @@ void VideoWindow::apply_video_offset()
     auto sec_offset = ql_sec->text().toInt();
     std::cout << "H: " << hour_offset << ", M: " << min_offset << ", S: " << sec_offset << std::endl;
     auto vframe = vreader->get_frame(hour_offset, min_offset, sec_offset);
-	//upate the current frame index
-	auto curr_fidx = vreader->get_current_frame_index();
-	auto fnum_str = utils::make_framecount_string(curr_fidx);
+    //upate the current frame index
+    auto curr_fidx = vreader->get_current_frame_index();
+    auto fnum_str = utils::make_framecount_string(curr_fidx);
     framenum_label->setText(fnum_str.c_str());
-	//draw the frame to the UI
+
+    int h_ts, m_ts, s_ts;
+    std::tie(h_ts, m_ts, s_ts) = vreader->get_current_timestamp();
+    std::string hour_ts {"hour: " + std::to_string(h_ts)};
+    hour_timestamp->setText(hour_ts.c_str());
+    std::string min_ts {"min: " + std::to_string(m_ts)};
+    min_timestamp->setText(min_ts.c_str());
+    std::string sec_ts {"sec: " + std::to_string(s_ts)};
+    sec_timestamp->setText(sec_ts.c_str());
+
+    //draw the frame to the UI
     fview->update_frame(vframe);
-	
-	//TODO: just a sanity check for now...
-	//might also be nice to show timestamp of current frame on the UI when jumping like this, in which case this 
-	//information would be useful
-	auto curr_tstamp = vreader->get_current_timestamp();
-	assert(std::get<0>(curr_tstamp) == hour_offset);
-	assert(std::get<1>(curr_tstamp) == min_offset);
-	assert(std::abs(std::get<2>(curr_tstamp) - sec_offset) <= 1);
 }
 
 void VideoWindow::adjust_paintbrush_size()

@@ -31,9 +31,9 @@ FrameViewer::FrameViewer(const QImage& initial_frame, QObject* parent)
 
 void FrameViewer::display_frame(const QImage& frame) 
 {
-	//TODO: before changing out the current frame for the new one, marshal all of its information, and (optionally) write it out to disk?
-	//Need to figure out how exactly I want to handle this part. 
-	
+    //TODO: before changing out the current frame for the new one, marshal all of its information, and (optionally) write it out to disk?
+    //Need to figure out how exactly I want to handle this part. 
+    
     current_frame = frame; 
     annotation_locations.clear();
     limbo_points.clear();
