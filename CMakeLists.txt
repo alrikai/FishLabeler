@@ -10,7 +10,14 @@ find_package(Boost COMPONENTS filesystem REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS}) 
 
 #OpenCV
-FIND_PACKAGE(OpenCV COMPONENTS core highgui imgproc REQUIRED) #imgcodecs 
+FIND_PACKAGE(OpenCV COMPONENTS core highgui imgproc REQUIRED)  
+if(OpenCV_VERSION VERSION_LESS "3.0")
+	MESSAGE("Using OpenCV vers. ${OpenCV_VERSION}") 
+else()
+    #3.0 moved imwrite into imgcodecs, which doesn't exist in 2.X 
+    FIND_PACKAGE(OpenCV COMPONENTS core highgui imgproc imgcodecs REQUIRED) 
+	MESSAGE("Using OpenCV vers. ${OpenCV_VERSION}") 
+endif()
 include_directories(${OpenCV_INCLUDE_DIRS})
 message("OpenCV include: " ${OpenCV_INCLUDE_DIRS})
 message("OpenCV link: " ${OpenCV_LIBS})

@@ -3,9 +3,23 @@
 #include <fstream>
 #include <opencv2/opencv.hpp>
 
+
+void VideoLogger::create_logdirs(boost::filesystem::path& logdir, const std::string& logdir_name) 
+{
+    logdir /= logdir_name;
+    if (!boost::filesystem::exists(logdir)) {
+        if(boost::filesystem::create_directory(logdir)) {
+            std::cout << "Created " << logdir_name << " directory at " << logdir.string() << std::endl;
+        } else {
+            std::string err_msg {"ERROR: couldn't create " + logdir_name + " directory at " + logdir.string()};
+            throw std::runtime_error(err_msg);
+        }
+    }
+}
+
+//segmentation masks --> logged as an image 
 void VideoLogger::write_annotations(const std::string& framenum, std::vector<QPointF>&& annotations, const int ptsz, const int height, const int width)
 {
-    //TODO: need to make sure the input 'framenum' string has no extension already
     auto output_fpath = annotation_logdir;
     output_fpath /= framenum;
     std::string out_fname = output_fpath.string() + ".png"; 
@@ -24,9 +38,25 @@ void VideoLogger::write_annotations(const std::string& framenum, std::vector<QPo
     cv::imwrite(out_fname, log_annotation);
 }
 
+
+//bounding boxes --> logged in a text file
+void VideoLogger::write_bboxes(const std::string& framenum, std::vector<QRectF>&& bbox_rects, const int ptsz, const int height, const int width)
+{
+    auto output_fpath = bbox_logdir;
+    output_fpath /= framenum;
+    std::string out_fname = output_fpath.string() + ".txt"; 
+    std::ofstream fout(out_fname);
+    //top left and bottom right coordinates
+    qreal tl_x, tl_y, br_x, br_y;
+    for (auto bbox : bbox_rects) {
+        bbox.getCoords(&tl_x, &tl_y, &br_x, &br_y);
+        fout << tl_x << ", " << tl_y << ", " << br_x << ", " << br_y << "\n";
+    }
+    fout.close();
+}
+
 void VideoLogger::write_textmetadata(const std::string& framenum, std::string&& text_meta)
 {
-    //TODO: need to make sure the input 'framenum' string has no extension already
     auto output_fpath = text_logdir;
     output_fpath /= framenum;
     std::string out_fname = output_fpath.string() + ".txt"; 

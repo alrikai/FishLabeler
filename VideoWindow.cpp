@@ -193,12 +193,16 @@ void VideoWindow::next_frame()
         }
 
         //check the frame viewer for annotations
-        auto fannotation = fview->get_frame_annotations();
-        if (fannotation.size() > 0) {
-            const int bsz = fviewer->get_brushsz();
-            const int fheight = fviewer->get_frame_height();
-            const int fwidth = fviewer->get_frame_width();
-            vlogger->write_annotations(frame_name, std::move(fannotation), bsz, fheight, fwidth);
+        auto fannotations = fview->get_frame_annotations();
+        const int bsz = fviewer->get_brushsz();
+        const int fheight = fviewer->get_frame_height();
+        const int fwidth = fviewer->get_frame_width();
+        if (fannotations.bboxes.size() > 0) {
+            vlogger->write_bboxes(frame_name, std::move(fannotations.bboxes), bsz, fheight, fwidth);
+        }
+
+        if (fannotations.segm_points.size() > 0) {
+            vlogger->write_annotations(frame_name, std::move(fannotations.segm_points), bsz, fheight, fwidth);
         }
 
         fview->update_frame(vframe);

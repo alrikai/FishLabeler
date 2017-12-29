@@ -15,6 +15,8 @@ namespace utils {
             }
         }
     }
+
+    
 }
 
 FrameViewer::FrameViewer(const QImage& initial_frame, QObject* parent)
@@ -27,16 +29,19 @@ FrameViewer::FrameViewer(const QImage& initial_frame, QObject* parent)
     drawing_annotations = false;
     annotation_brushsz = 8;
     display_frame(initial_frame);
+
+    mode = ANNOTATION_MODE::SEGMENTATION;
 }
 
 void FrameViewer::display_frame(const QImage& frame) 
 {
-    //TODO: before changing out the current frame for the new one, marshal all of its information, and (optionally) write it out to disk?
-    //Need to figure out how exactly I want to handle this part. 
-    
     current_frame = frame; 
+
     annotation_locations.clear();
     limbo_points.clear();
+    boundingbox_locations.clear();
+    limbo_bboxes.clear();
+    
     this->update();
 }
 
@@ -52,48 +57,83 @@ void FrameViewer::drawForeground(QPainter* painter, const QRectF &rect)
     //pen.setBrush(Qt::lightGray);
     pen.setBrush(Qt::red);
     painter->setPen(pen);   
-    for (int i = 0; i < annotation_locations.size(); i++) {
-        auto npt_loc = annotation_locations[i];
-        painter->drawPoint(npt_loc.x(),npt_loc.y());
-        std::cout << "drawing pt " << npt_loc.x() << ", " << npt_loc.y() << std::endl;
+
+    if (mode == ANNOTATION_MODE::SEGMENTATION) {
+        for (int i = 0; i < annotation_locations.size(); i++) {
+            auto npt_loc = annotation_locations[i];
+            painter->drawPoint(npt_loc.x(),npt_loc.y());
+            std::cout << "drawing pt " << npt_loc.x() << ", " << npt_loc.y() << std::endl;
+        }
+    } else {
+        for (auto bbox : boundingbox_locations) {
+            painter->drawRect(bbox);
+        }
+        //draw the current_bbox only if it is currently being drawn (and thus not in the boundingbox_locations vector)
+        if (drawing_annotations) {
+            painter->drawRect(current_bbox);
+        }
     }
 }
 
 void FrameViewer::mouseMoveEvent(QGraphicsSceneMouseEvent* mevt)
 {
     if (drawing_annotations) {
-        //NOTE: could also use e.g. mevt->scenePos().x(), mevt->scenePos().y()
-        annotation_locations.emplace_back(mevt->scenePos().x(), mevt->scenePos().y());
-        std::cout << "mpos: " << mevt->scenePos().x() << ", " << mevt->scenePos().y() << std::endl;
+
+        if (mode == ANNOTATION_MODE::SEGMENTATION) {
+            //NOTE: could also use e.g. mevt->scenePos().x(), mevt->scenePos().y()
+            annotation_locations.emplace_back(mevt->scenePos().x(), mevt->scenePos().y());
+            std::cout << "mpos: " << mevt->scenePos().x() << ", " << mevt->scenePos().y() << std::endl;
+        } else {
+            current_bbox.setBottomRight(QPointF(mevt->scenePos().x(), mevt->scenePos().y()));
+        }
         this->update();
     }
 }
 
 void FrameViewer::mousePressEvent(QGraphicsSceneMouseEvent* mevt)
 {
-    annotation_locations.emplace_back(mevt->scenePos().x(), mevt->scenePos().y());
-    std::cout << "mpos click: " << mevt->scenePos().x() << ", " << mevt->scenePos().y() << std::endl;
+    if (mode == ANNOTATION_MODE::SEGMENTATION) {
+        annotation_locations.emplace_back(mevt->scenePos().x(), mevt->scenePos().y());
+        std::cout << "mpos click: " << mevt->scenePos().x() << ", " << mevt->scenePos().y() << std::endl;
+    } else {
+        static const QSizeF default_bbox_sz {0, 0};
+        current_bbox = QRectF(QPointF(mevt->scenePos().x(), mevt->scenePos().y()), default_bbox_sz);
+    }
+
     drawing_annotations = true;
     this->update();
 }
 
 void FrameViewer::mouseReleaseEvent(QGraphicsSceneMouseEvent* mevt)
 {
-    annotation_locations.emplace_back(mevt->scenePos().x(), mevt->scenePos().y());
-    std::cout << "mpos rel: " << mevt->scenePos().x() << ", " << mevt->scenePos().y() << std::endl;
+    if (mode == ANNOTATION_MODE::SEGMENTATION) {
+        annotation_locations.emplace_back(mevt->scenePos().x(), mevt->scenePos().y());
+        std::cout << "mpos rel: " << mevt->scenePos().x() << ", " << mevt->scenePos().y() << std::endl;
+    } else {
+        current_bbox.setBottomRight(QPointF(mevt->scenePos().x(), mevt->scenePos().y()));
+        boundingbox_locations.emplace_back(current_bbox);
+    }
     drawing_annotations = false;
     this->update();
 }
 
 void FrameViewer::undo_label()
 {
-    utils::point_un_redo(annotation_locations, limbo_points);
+    if (mode == ANNOTATION_MODE::SEGMENTATION) {
+        utils::point_un_redo(annotation_locations, limbo_points);
+    } else {
+        utils::point_un_redo(boundingbox_locations, limbo_bboxes);
+    }
     this->update();
 }
 
 void FrameViewer::redo_label()
 {
-    utils::point_un_redo(limbo_points, annotation_locations);
+    if (mode == ANNOTATION_MODE::SEGMENTATION) {
+        utils::point_un_redo(limbo_points, annotation_locations);
+    } else {
+        utils::point_un_redo(limbo_bboxes, boundingbox_locations);
+    }
     this->update();
 }
 
@@ -108,6 +148,14 @@ void FrameViewer::keyPressEvent(QKeyEvent *evt)
             case Qt::Key_R:
                 std::cout << "REDO key" << std::endl;
                 redo_label();
+                break;
+            case Qt::Key_B:
+                std::cout << "BOUNDING_BOX key" << std::endl;
+                mode = ANNOTATION_MODE::BOUNDINGBOX;
+                break;
+            case Qt::Key_S:
+                std::cout << "SEGMENTATION key" << std::endl;
+                mode = ANNOTATION_MODE::SEGMENTATION;
                 break;
             default:
                 std::cout << "key: " << evt->key() << std::endl;

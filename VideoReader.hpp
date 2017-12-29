@@ -2,6 +2,7 @@
 #define FISHLABELER_VIDEOREADER_HPP
 
 #include <cstdint>
+#include <cmath>
 #include <string>
 #include <vector>
 #include <array>

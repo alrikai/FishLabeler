@@ -8,7 +8,22 @@
 #include <QGraphicsTextItem>
 #include <QGraphicsSceneMouseEvent>
 #include <QWheelEvent>
+#include <QRectF>
 
+enum class ANNOTATION_MODE {
+    SEGMENTATION,
+    BOUNDINGBOX
+};
+
+//something to encapulate all of the user-supplied information for a given frame
+struct FrameAnnotations {
+    FrameAnnotations(std::vector<QRectF>&& fvboxes, std::vector<QPointF>&& fvpoints)
+        : bboxes(std::move(fvboxes)), segm_points(std::move(fvpoints))
+    {}
+
+    std::vector<QRectF> bboxes;
+    std::vector<QPointF> segm_points;
+};
 
 class FrameViewer : public QGraphicsScene
 {
@@ -40,6 +55,9 @@ public:
         return current_frame.height(); 
     }
 
+    std::vector<QRectF> get_bounding_boxes() const {
+        return boundingbox_locations;
+    }
 
     std::vector<QPointF> get_frame_annotations() const {
         return annotation_locations;
@@ -61,12 +79,20 @@ private:
     QImage current_frame;
 
     //the (float) coords of the mouse position as the user draws things
+    //in segmentation mode
     std::vector<QPointF> annotation_locations;
     std::vector<QPointF> limbo_points;
+
+    //the bounding box coordinates when the user is drawing in bounding box mode
+    std::vector<QRectF> boundingbox_locations;
+    std::vector<QRectF> limbo_bboxes;
+    QRectF current_bbox;
 
     QGraphicsTextItem cursor;
     int annotation_brushsz;
     bool drawing_annotations;
+
+    ANNOTATION_MODE mode;
 };
 
 
@@ -78,6 +104,7 @@ public:
     {
         fviewer = reinterpret_cast<FrameViewer*>(fview);
         this->update();
+        this->setMouseTracking(true);
     }
 
     QSize sizeHint() const override {
@@ -90,8 +117,11 @@ public:
         fviewer->display_frame(frame);
     }
 
-    std::vector<QPointF> get_frame_annotations() const {
-        return fviewer->get_frame_annotations();
+    FrameAnnotations get_frame_annotations() const {
+        auto bboxes = fviewer->get_bounding_boxes();   
+        auto segmpts = fviewer->get_frame_annotations();   
+        FrameAnnotations metadata (std::move(bboxes), std::move(segmpts));
+        return metadata;
     }
 
 protected:
