@@ -15,8 +15,6 @@ namespace utils {
             }
         }
     }
-
-    
 }
 
 FrameViewer::FrameViewer(const QImage& initial_frame, QObject* parent)
@@ -30,7 +28,7 @@ FrameViewer::FrameViewer(const QImage& initial_frame, QObject* parent)
     annotation_brushsz = 8;
     display_frame(initial_frame);
 
-    mode = ANNOTATION_MODE::SEGMENTATION;
+    mode = ANNOTATION_MODE::BOUNDINGBOX;
 }
 
 void FrameViewer::display_frame(const QImage& frame) 
@@ -45,12 +43,12 @@ void FrameViewer::display_frame(const QImage& frame)
     this->update();
 }
 
-void FrameViewer::drawBackground(QPainter* painter, const QRectF &rect)
+void FrameViewer::drawBackground(QPainter* painter, const QRectF&  rect)
 {
     this->addPixmap(QPixmap::fromImage(current_frame));
 }
 
-void FrameViewer::drawForeground(QPainter* painter, const QRectF &rect)
+void FrameViewer::drawForeground(QPainter* painter, const QRectF& rect)
 {
     QPen pen;
     pen.setWidth(annotation_brushsz);
@@ -84,7 +82,7 @@ void FrameViewer::mouseMoveEvent(QGraphicsSceneMouseEvent* mevt)
             annotation_locations.emplace_back(mevt->scenePos().x(), mevt->scenePos().y());
             std::cout << "mpos: " << mevt->scenePos().x() << ", " << mevt->scenePos().y() << std::endl;
         } else {
-            current_bbox.setBottomRight(QPointF(mevt->scenePos().x(), mevt->scenePos().y()));
+            current_bbox.setBottomRight(QPoint(mevt->scenePos().x(), mevt->scenePos().y()));
         }
         this->update();
     }
@@ -96,8 +94,8 @@ void FrameViewer::mousePressEvent(QGraphicsSceneMouseEvent* mevt)
         annotation_locations.emplace_back(mevt->scenePos().x(), mevt->scenePos().y());
         std::cout << "mpos click: " << mevt->scenePos().x() << ", " << mevt->scenePos().y() << std::endl;
     } else {
-        static const QSizeF default_bbox_sz {0, 0};
-        current_bbox = QRectF(QPointF(mevt->scenePos().x(), mevt->scenePos().y()), default_bbox_sz);
+        static const QSize default_bbox_sz {0, 0};
+        current_bbox = QRect(QPoint(mevt->scenePos().x(), mevt->scenePos().y()), default_bbox_sz);
     }
 
     drawing_annotations = true;
@@ -110,7 +108,7 @@ void FrameViewer::mouseReleaseEvent(QGraphicsSceneMouseEvent* mevt)
         annotation_locations.emplace_back(mevt->scenePos().x(), mevt->scenePos().y());
         std::cout << "mpos rel: " << mevt->scenePos().x() << ", " << mevt->scenePos().y() << std::endl;
     } else {
-        current_bbox.setBottomRight(QPointF(mevt->scenePos().x(), mevt->scenePos().y()));
+        current_bbox.setBottomRight(QPoint(mevt->scenePos().x(), mevt->scenePos().y()));
         boundingbox_locations.emplace_back(current_bbox);
     }
     drawing_annotations = false;

@@ -8,7 +8,7 @@
 #include <QGraphicsTextItem>
 #include <QGraphicsSceneMouseEvent>
 #include <QWheelEvent>
-#include <QRectF>
+#include <QRect>
 
 enum class ANNOTATION_MODE {
     SEGMENTATION,
@@ -17,12 +17,12 @@ enum class ANNOTATION_MODE {
 
 //something to encapulate all of the user-supplied information for a given frame
 struct FrameAnnotations {
-    FrameAnnotations(std::vector<QRectF>&& fvboxes, std::vector<QPointF>&& fvpoints)
+    FrameAnnotations(std::vector<QRect>&& fvboxes, std::vector<QPoint>&& fvpoints)
         : bboxes(std::move(fvboxes)), segm_points(std::move(fvpoints))
     {}
 
-    std::vector<QRectF> bboxes;
-    std::vector<QPointF> segm_points;
+    std::vector<QRect> bboxes;
+    std::vector<QPoint> segm_points;
 };
 
 class FrameViewer : public QGraphicsScene
@@ -55,13 +55,22 @@ public:
         return current_frame.height(); 
     }
 
-    std::vector<QRectF> get_bounding_boxes() const {
+    std::vector<QRect> get_bounding_boxes() const {
         return boundingbox_locations;
     }
 
-    std::vector<QPointF> get_frame_annotations() const {
+    std::vector<QPoint> get_frame_annotations() const {
         return annotation_locations;
     }
+
+    void set_boundingboxes(std::vector<QRect>&& bboxes) {
+        boundingbox_locations.insert(boundingbox_locations.end(), bboxes.begin(), bboxes.end());
+    }
+
+    void set_pixelannotations(std::vector<QPoint>&& pannotations) {
+        annotation_locations.insert(annotation_locations.end(), pannotations.begin(), pannotations.end());
+    }
+ 
 
 protected slots:
     void drawBackground(QPainter* painter, const QRectF &rect) override;
@@ -80,13 +89,13 @@ private:
 
     //the (float) coords of the mouse position as the user draws things
     //in segmentation mode
-    std::vector<QPointF> annotation_locations;
-    std::vector<QPointF> limbo_points;
+    std::vector<QPoint> annotation_locations;
+    std::vector<QPoint> limbo_points;
 
     //the bounding box coordinates when the user is drawing in bounding box mode
-    std::vector<QRectF> boundingbox_locations;
-    std::vector<QRectF> limbo_bboxes;
-    QRectF current_bbox;
+    std::vector<QRect> boundingbox_locations;
+    std::vector<QRect> limbo_bboxes;
+    QRect current_bbox;
 
     QGraphicsTextItem cursor;
     int annotation_brushsz;
@@ -122,6 +131,17 @@ public:
         auto segmpts = fviewer->get_frame_annotations();   
         FrameAnnotations metadata (std::move(bboxes), std::move(segmpts));
         return metadata;
+    }
+
+    void set_frame_annotations(FrameAnnotations&& frame_metadata) {
+        if (frame_metadata.bboxes.size() > 0) {
+            fviewer->set_boundingboxes(std::move(frame_metadata.bboxes));
+        }
+
+        if (frame_metadata.segm_points.size() > 0) {
+            fviewer->set_pixelannotations(std::move(frame_metadata.segm_points));
+        }
+        this->update();
     }
 
 protected:

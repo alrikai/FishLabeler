@@ -35,6 +35,7 @@ private:
 
     void apply_video_offset();
     void adjust_paintbrush_size();
+    void collect_frame_metadata(const QImage& vframe, const int old_frame_index, const int new_frame_index);
 
     //TODO: figure out if Qt manages the lifetime, or if I do...
     std::shared_ptr<FrameViewer> fviewer;

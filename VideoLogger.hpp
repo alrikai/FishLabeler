@@ -6,8 +6,8 @@
 #include <stdexcept>
 #include <iostream>
 
-#include <QPointF>
-#include <QRectF>
+#include <QPoint>
+#include <QRect>
 #include <boost/filesystem.hpp>
 
 class VideoLogger
@@ -30,13 +30,36 @@ public:
         create_logdirs(text_logdir, "Metadata");
     }
 
-    void write_bboxes(const std::string& framenum, std::vector<QRectF>&& annotations, const int ptsz, const int height, const int width);
-    void write_annotations(const std::string& framenum, std::vector<QPointF>&& annotations, const int ptsz, const int height, const int width);
+    void write_bboxes(const std::string& framenum, std::vector<QRect>&& annotations, const int ptsz, const int height, const int width);
+    void write_annotations(const std::string& framenum, std::vector<QPoint>&& annotations, const int ptsz, const int height, const int width);
     void write_textmetadata(const std::string& framenum, std::string&& text_meta);
 
-private:
+    bool has_annotations(const std::string& framenum) const {
+        auto fpath = make_filepath(annotation_logdir, framenum, ".png");
+        return boost::filesystem::exists(fpath);
+    }
+    std::vector<QPoint> get_annotations (const std::string& framenum) const;
 
+    bool has_boundingbox(const std::string& framenum) const {
+        auto fpath = make_filepath(bbox_logdir, framenum, ".txt");
+        return boost::filesystem::exists(fpath);
+    }
+    std::vector<QRect> get_boundingboxes (const std::string& framenum) const;
+
+    bool has_textmetadata(const std::string& framenum) const {
+        auto fpath = make_filepath(text_logdir, framenum, ".txt");
+        return boost::filesystem::exists(fpath);
+    }
+    std::string get_textmetadata (const std::string& framenum) const;
+
+private:
     void create_logdirs(boost::filesystem::path& logdir, const std::string& logdir_name);
+    boost::filesystem::path make_filepath(const boost::filesystem::path& ldir, const std::string& fname, const std::string& ext) const {
+        auto output_fpath = ldir;
+        output_fpath /= fname;
+        output_fpath += ext; 
+        return output_fpath;
+    }
 
     const boost::filesystem::path logdir;
     boost::filesystem::path annotation_logdir;

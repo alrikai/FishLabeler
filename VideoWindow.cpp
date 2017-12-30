@@ -175,50 +175,70 @@ void VideoWindow::keyPressEvent(QKeyEvent *evt)
     QWidget::keyPressEvent(evt);
 }
 
+void VideoWindow::collect_frame_metadata(const QImage& vframe, const int old_frame_index, const int new_frame_index)
+{
+    //we want to get the frame information that is being phased out (so use old frame index)
+    auto frame_name = vreader->get_frame_name(old_frame_index);
+
+    //check the edit box for text
+    auto fmeta_text = metadata_edit->toPlainText().toStdString();
+    if (fmeta_text.size() > 0) {
+        vlogger->write_textmetadata(frame_name, std::move(fmeta_text));
+        //reset the metadata text, if needed
+        metadata_edit->clear();
+    }
+
+    //check the frame viewer for annotations
+    auto fannotations = fview->get_frame_annotations();
+    const int bsz = fviewer->get_brushsz();
+    const int fheight = fviewer->get_frame_height();
+    const int fwidth = fviewer->get_frame_width();
+    if (fannotations.bboxes.size() > 0) {
+        vlogger->write_bboxes(frame_name, std::move(fannotations.bboxes), bsz, fheight, fwidth);
+    }
+
+    if (fannotations.segm_points.size() > 0) {
+        vlogger->write_annotations(frame_name, std::move(fannotations.segm_points), bsz, fheight, fwidth);
+    }
+
+    //move to the new frame to be displayed
+    fview->update_frame(vframe);
+
+    auto nextframe_name = vreader->get_frame_name(new_frame_index);
+    //check for pre-existing metadata as well
+    if (vlogger->has_annotations(nextframe_name) || vlogger->has_boundingbox(nextframe_name)) {
+        auto nfbboxes = vlogger->get_boundingboxes(nextframe_name);
+        auto nfannotations = vlogger->get_annotations(nextframe_name);
+        FrameAnnotations nframe_annotations {std::move(nfbboxes), std::move(nfannotations)};
+        fview->set_frame_annotations(std::move(nframe_annotations));
+    }
+
+    //... as well as pre-existing text metadata
+    if (vlogger->has_textmetadata(nextframe_name)) {
+        auto nfmetadata = vlogger->get_textmetadata(nextframe_name);
+        metadata_edit->appendPlainText(QString::fromStdString(nfmetadata));
+    }
+
+    auto fnum_str = utils::make_framecount_string(new_frame_index);
+    framenum_label->setText(fnum_str.c_str());
+ 
+    int h_ts, m_ts, s_ts;
+    std::tie(h_ts, m_ts, s_ts) = vreader->get_current_timestamp();
+    std::string hour_ts {"hour: " + std::to_string(h_ts)};
+    hour_timestamp->setText(hour_ts.c_str());
+    std::string min_ts {"min: " + std::to_string(m_ts)};
+    min_timestamp->setText(min_ts.c_str());
+    std::string sec_ts {"sec: " + std::to_string(s_ts)};
+    sec_timestamp->setText(sec_ts.c_str());       
+    fview->update();
+}
+
 void VideoWindow::next_frame()
 {
     const int frame_index = vreader->get_current_frame_index();
     if (frame_index < vreader->get_num_frames()) {
         auto vframe = vreader->get_next_frame();
-
-        //we want to get the frame information that is being phased out (so use old frame index)
-        auto frame_name = vreader->get_frame_name(frame_index);
-
-        //check the edit box for text
-        auto fmeta_text = metadata_edit->toPlainText().toStdString();
-        if (fmeta_text.size() > 0) {
-            vlogger->write_textmetadata(frame_name, std::move(fmeta_text));
-            //reset the metadata text, if needed
-            metadata_edit->clear();
-        }
-
-        //check the frame viewer for annotations
-        auto fannotations = fview->get_frame_annotations();
-        const int bsz = fviewer->get_brushsz();
-        const int fheight = fviewer->get_frame_height();
-        const int fwidth = fviewer->get_frame_width();
-        if (fannotations.bboxes.size() > 0) {
-            vlogger->write_bboxes(frame_name, std::move(fannotations.bboxes), bsz, fheight, fwidth);
-        }
-
-        if (fannotations.segm_points.size() > 0) {
-            vlogger->write_annotations(frame_name, std::move(fannotations.segm_points), bsz, fheight, fwidth);
-        }
-
-        fview->update_frame(vframe);
-        auto fnum_str = utils::make_framecount_string(frame_index+1);
-        framenum_label->setText(fnum_str.c_str());
-     
-        int h_ts, m_ts, s_ts;
-        std::tie(h_ts, m_ts, s_ts) = vreader->get_current_timestamp();
-        std::string hour_ts {"hour: " + std::to_string(h_ts)};
-        hour_timestamp->setText(hour_ts.c_str());
-        std::string min_ts {"min: " + std::to_string(m_ts)};
-        min_timestamp->setText(min_ts.c_str());
-        std::string sec_ts {"sec: " + std::to_string(s_ts)};
-        sec_timestamp->setText(sec_ts.c_str());       
-        
-        fview->update();
+        collect_frame_metadata(vframe, frame_index, frame_index+1);
     }
 }
 
@@ -227,10 +247,7 @@ void VideoWindow::prev_frame()
     const int frame_index = vreader->get_current_frame_index();
     if (frame_index > 0) {
         auto vframe = vreader->get_prev_frame();
-        fview->update_frame(vframe);
-        auto fnum_str = utils::make_framecount_string(frame_index-1);
-        framenum_label->setText(fnum_str.c_str());
-        fview->update();
+        collect_frame_metadata(vframe, frame_index, frame_index-1);
     }
 }
 
@@ -241,6 +258,7 @@ void VideoWindow::closeEvent(QCloseEvent *evt)
 
 void VideoWindow::apply_video_offset()
 {
+    auto frame_index = vreader->get_current_frame_index();
     auto hour_offset = ql_hour->text().toInt();
     auto min_offset = ql_min->text().toInt();
     auto sec_offset = ql_sec->text().toInt();
@@ -248,20 +266,8 @@ void VideoWindow::apply_video_offset()
     auto vframe = vreader->get_frame(hour_offset, min_offset, sec_offset);
     //upate the current frame index
     auto curr_fidx = vreader->get_current_frame_index();
-    auto fnum_str = utils::make_framecount_string(curr_fidx);
-    framenum_label->setText(fnum_str.c_str());
 
-    int h_ts, m_ts, s_ts;
-    std::tie(h_ts, m_ts, s_ts) = vreader->get_current_timestamp();
-    std::string hour_ts {"hour: " + std::to_string(h_ts)};
-    hour_timestamp->setText(hour_ts.c_str());
-    std::string min_ts {"min: " + std::to_string(m_ts)};
-    min_timestamp->setText(min_ts.c_str());
-    std::string sec_ts {"sec: " + std::to_string(s_ts)};
-    sec_timestamp->setText(sec_ts.c_str());
-
-    //draw the frame to the UI
-    fview->update_frame(vframe);
+    collect_frame_metadata(vframe, frame_index, curr_fidx);
 }
 
 void VideoWindow::adjust_paintbrush_size()
