@@ -19,7 +19,6 @@ class VideoReader
 public: 
     using PixelT = uint8_t;
 
-    //TODO: need some way of getting the accurate frame rate, so we can convert from timestamps to frame indices
     explicit VideoReader(const std::string& filepath) 
         : fpath(filepath), frame_index(0), video_fps(0.0)
     {
@@ -36,7 +35,8 @@ public:
     }
 
     std::string get_frame_name(const int frame_index) {
-        if (frame_index < 0 || frame_index >= files.size()) {
+        //just to squash warnings, we won't be using videos with > 4B frames
+        if (frame_index < 0 || frame_index >= static_cast<int>(files.size())) {
             std::string err_msg {"ERROR: index " + std::to_string(frame_index) + " is out of bounds"};     
             throw std::runtime_error(err_msg);
         }

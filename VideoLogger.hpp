@@ -10,6 +10,8 @@
 #include <QRect>
 #include <boost/filesystem.hpp>
 
+#include "AnnotationTypes.hpp"
+
 class VideoLogger
 {
 public:
@@ -30,21 +32,21 @@ public:
         create_logdirs(text_logdir, "Metadata");
     }
 
-    void write_bboxes(const std::string& framenum, std::vector<QRect>&& annotations, const int ptsz, const int height, const int width);
-    void write_annotations(const std::string& framenum, std::vector<QPoint>&& annotations, const int ptsz, const int height, const int width);
+    void write_bboxes(const std::string& framenum, std::vector<BoundingBoxMD>&& annotations, const int ptsz, const int height, const int width);
+    void write_annotations(const std::string& framenum, std::vector<PixelLabelMB>&& annotations, const int ptsz, const int height, const int width);
     void write_textmetadata(const std::string& framenum, std::string&& text_meta);
 
     bool has_annotations(const std::string& framenum) const {
         auto fpath = make_filepath(annotation_logdir, framenum, ".png");
         return boost::filesystem::exists(fpath);
     }
-    std::vector<QPoint> get_annotations (const std::string& framenum) const;
+    std::vector<PixelLabelMB> get_annotations (const std::string& framenum) const;
 
     bool has_boundingbox(const std::string& framenum) const {
         auto fpath = make_filepath(bbox_logdir, framenum, ".txt");
         return boost::filesystem::exists(fpath);
     }
-    std::vector<QRect> get_boundingboxes (const std::string& framenum) const;
+    std::vector<BoundingBoxMD> get_boundingboxes (const std::string& framenum) const;
 
     bool has_textmetadata(const std::string& framenum) const {
         auto fpath = make_filepath(text_logdir, framenum, ".txt");

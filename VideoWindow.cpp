@@ -5,10 +5,14 @@
 #include <QFileDialog>
 
 #include "VideoWindow.hpp"
+#include "AnnotationTypes.hpp"
 
 
 /* TODO: what else to add to the UI? 
- * - more hotkeys for common actions
+ * - more hotkeys for common actions --> currently have:
+ *   {N, P, --> next / prev frame
+ *   cntrl+Z, cntrl+R --> undo / redo annotation
+ *   cntrl+B, cntrl+S --> bounding box / pixel-wise label mode
  * - top toolbar for save, exit, and maybe a help bar (for hotkeys)
  */
 
@@ -17,7 +21,6 @@
  *      then we should have a mode that'll just look at the +- 1 sec around the 'fish in the scene' times.
  * - make image scroll times faster
  * - make mouse capture times for annotations faster
- * - saving anootations out to disk along with the frame
  */
 
 namespace utils {
@@ -60,6 +63,11 @@ void VideoWindow::init_window()
     min_timestamp->setText("min: 0");
     sec_timestamp = new QLabel(main_window);
     sec_timestamp->setText("sec: 0");
+
+    instance_idledit = new QLineEdit("0", main_window);
+    connect(instance_idledit, &QLineEdit::editingFinished, [this]{
+        set_instanceid();
+    });
 
     prev_btn = new QPushButton("previous", main_window);
     connect(prev_btn, &QPushButton::clicked, [this]{
@@ -118,6 +126,8 @@ void VideoWindow::set_cfgUI_layout(QHBoxLayout* cfg_layout)
     ql_sec_txt->setText("sec: ");
     auto ql_paintsz_txt = new QLabel(main_window);
     ql_paintsz_txt->setText("brush size: ");
+    auto ql_instanceid_txt = new QLabel(main_window);
+    ql_instanceid_txt->setText("instance ID: ");
 
     constexpr int min_btn_height = 40; 
     constexpr int min_btn_width = 100;
@@ -130,17 +140,22 @@ void VideoWindow::set_cfgUI_layout(QHBoxLayout* cfg_layout)
     ql_min->setMaximumWidth(max_offset_width);
     ql_sec->setMaximumWidth(max_offset_width);
     ql_paintsz->setMaximumWidth(max_offset_width);
+    instance_idledit->setMaximumWidth(max_offset_width);
 
     constexpr int max_offset_text_width = 40;
     ql_hour_txt->setMaximumWidth(max_offset_text_width);
     ql_min_txt->setMaximumWidth(max_offset_text_width);
     ql_sec_txt->setMaximumWidth(max_offset_text_width);
     ql_paintsz_txt->setMaximumWidth(2*max_offset_text_width);
+    ql_instanceid_txt->setMaximumWidth(2*max_offset_text_width);
 
     cfg_layout->addWidget(framenum_label);
     cfg_layout->addWidget(hour_timestamp);
     cfg_layout->addWidget(min_timestamp);
     cfg_layout->addWidget(sec_timestamp);
+
+    cfg_layout->addWidget(ql_instanceid_txt);
+    cfg_layout->addWidget(instance_idledit);
    
     cfg_layout->addWidget(ql_paintsz_txt);
     cfg_layout->addWidget(ql_paintsz);
@@ -175,7 +190,7 @@ void VideoWindow::keyPressEvent(QKeyEvent *evt)
     QWidget::keyPressEvent(evt);
 }
 
-void VideoWindow::collect_frame_metadata(const QImage& vframe, const int old_frame_index, const int new_frame_index)
+void VideoWindow::write_frame_metadat(const int old_frame_index)
 {
     //we want to get the frame information that is being phased out (so use old frame index)
     auto frame_name = vreader->get_frame_name(old_frame_index);
@@ -188,7 +203,7 @@ void VideoWindow::collect_frame_metadata(const QImage& vframe, const int old_fra
         metadata_edit->clear();
     }
 
-    //check the frame viewer for annotations
+    //check the frame viewer for user-supplied annotations and write them out to disk
     auto fannotations = fview->get_frame_annotations();
     const int bsz = fviewer->get_brushsz();
     const int fheight = fviewer->get_frame_height();
@@ -200,10 +215,10 @@ void VideoWindow::collect_frame_metadata(const QImage& vframe, const int old_fra
     if (fannotations.segm_points.size() > 0) {
         vlogger->write_annotations(frame_name, std::move(fannotations.segm_points), bsz, fheight, fwidth);
     }
+}
 
-    //move to the new frame to be displayed
-    fview->update_frame(vframe);
-
+void VideoWindow::retrieve_frame_metadata(const int new_frame_index)
+{
     auto nextframe_name = vreader->get_frame_name(new_frame_index);
     //check for pre-existing metadata as well
     if (vlogger->has_annotations(nextframe_name) || vlogger->has_boundingbox(nextframe_name)) {
@@ -218,6 +233,16 @@ void VideoWindow::collect_frame_metadata(const QImage& vframe, const int old_fra
         auto nfmetadata = vlogger->get_textmetadata(nextframe_name);
         metadata_edit->appendPlainText(QString::fromStdString(nfmetadata));
     }
+}
+
+void VideoWindow::frame_change_metadata(const QImage& vframe, const int old_frame_index, const int new_frame_index)
+{
+    //collect and save existing frame's metadata
+    write_frame_metadat(old_frame_index);
+    //move to the new frame to be displayed
+    fview->update_frame(vframe);
+    //retreive and display existing metadata for the new frame (if applicable)
+    retrieve_frame_metadata(new_frame_index);
 
     auto fnum_str = utils::make_framecount_string(new_frame_index);
     framenum_label->setText(fnum_str.c_str());
@@ -238,7 +263,8 @@ void VideoWindow::next_frame()
     const int frame_index = vreader->get_current_frame_index();
     if (frame_index < vreader->get_num_frames()) {
         auto vframe = vreader->get_next_frame();
-        collect_frame_metadata(vframe, frame_index, frame_index+1);
+        //save frame's existing metadata, change frame, and (if applicable) load saved metadata for the new frame
+        frame_change_metadata(vframe, frame_index, frame_index+1);
     }
 }
 
@@ -247,13 +273,18 @@ void VideoWindow::prev_frame()
     const int frame_index = vreader->get_current_frame_index();
     if (frame_index > 0) {
         auto vframe = vreader->get_prev_frame();
-        collect_frame_metadata(vframe, frame_index, frame_index-1);
+        //save frame's existing metadata, change frame, and (if applicable) load saved metadata for the new frame
+        frame_change_metadata(vframe, frame_index, frame_index-1);
     }
 }
 
 void VideoWindow::closeEvent(QCloseEvent *evt)
 {
     //TODO: do we need to do anything? Flush out un-written annotations, etc?
+
+    //collect and save existing frame's metadata
+    const int frame_index = vreader->get_current_frame_index();
+    write_frame_metadat(frame_index);
 }
 
 void VideoWindow::apply_video_offset()
@@ -267,7 +298,8 @@ void VideoWindow::apply_video_offset()
     //upate the current frame index
     auto curr_fidx = vreader->get_current_frame_index();
 
-    collect_frame_metadata(vframe, frame_index, curr_fidx);
+    //save frame's existing metadata, change frame, and (if applicable) load saved metadata for the new frame
+    frame_change_metadata(vframe, frame_index, curr_fidx);
 }
 
 void VideoWindow::adjust_paintbrush_size()
@@ -275,3 +307,10 @@ void VideoWindow::adjust_paintbrush_size()
     auto brushsz = ql_paintsz->text().toInt();
     fviewer->set_brushsz(brushsz);
 }
+
+void VideoWindow::set_instanceid()
+{
+    auto instance_id = instance_idledit->text().toInt();
+    fviewer->set_instance_id(instance_id);
+}
+

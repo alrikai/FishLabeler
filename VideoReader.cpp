@@ -36,7 +36,8 @@ QImage VideoReader::get_frame(const int houroffset, const int minoffset, const i
 
 QImage VideoReader::get_frame(const int index)
 {
-    if (index < 0 || index >= files.size()) {
+    //just to squash warnings, we won't be using videos with > 4B frames
+    if (index < 0 || index >= static_cast<int>(files.size())) {
         std::string err_msg {"ERROR: " + std::to_string(index) + " out of bounds"};
         throw std::runtime_error(err_msg);
     }
