@@ -23,12 +23,6 @@
  * - make mouse capture times for annotations faster
  */
 
-namespace utils {
-    inline std::string make_framecount_string(const int findex) {
-        return std::string {"Frame #: " + std::to_string(findex)};
-    }
-}
-
 VideoWindow::VideoWindow(QWidget *parent)
     : QMainWindow(parent)
 {
@@ -54,7 +48,7 @@ void VideoWindow::init_window()
 {
     auto cfg_layout = new QHBoxLayout;
     framenum_label = new QLabel(main_window);
-    auto fnum_str = utils::make_framecount_string(0);
+    auto fnum_str = make_framecount_string(0);
     framenum_label->setText(fnum_str.c_str());
 
     hour_timestamp = new QLabel(main_window);
@@ -244,7 +238,7 @@ void VideoWindow::frame_change_metadata(const QImage& vframe, const int old_fram
     //retreive and display existing metadata for the new frame (if applicable)
     retrieve_frame_metadata(new_frame_index);
 
-    auto fnum_str = utils::make_framecount_string(new_frame_index);
+    auto fnum_str = make_framecount_string(new_frame_index);
     framenum_label->setText(fnum_str.c_str());
  
     int h_ts, m_ts, s_ts;
@@ -261,7 +255,7 @@ void VideoWindow::frame_change_metadata(const QImage& vframe, const int old_fram
 void VideoWindow::next_frame()
 {
     const int frame_index = vreader->get_current_frame_index();
-    if (frame_index < vreader->get_num_frames()) {
+    if (frame_index+1 < vreader->get_num_frames()) {
         auto vframe = vreader->get_next_frame();
         //save frame's existing metadata, change frame, and (if applicable) load saved metadata for the new frame
         frame_change_metadata(vframe, frame_index, frame_index+1);
@@ -294,7 +288,14 @@ void VideoWindow::apply_video_offset()
     auto min_offset = ql_min->text().toInt();
     auto sec_offset = ql_sec->text().toInt();
     std::cout << "H: " << hour_offset << ", M: " << min_offset << ", S: " << sec_offset << std::endl;
-    auto vframe = vreader->get_frame(hour_offset, min_offset, sec_offset);
+    QImage vframe;
+    try {
+        vframe = vreader->get_frame(hour_offset, min_offset, sec_offset);
+    } catch (const std::runtime_error& err) {
+        //can probably assume that we went past the end of the video -- maybe I should make custom error types for this...
+        auto last_frame_idx = vreader->get_num_frames();
+        vframe = vreader->get_frame(last_frame_idx-1);
+    }
     //upate the current frame index
     auto curr_fidx = vreader->get_current_frame_index();
 

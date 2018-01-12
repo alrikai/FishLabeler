@@ -45,6 +45,7 @@ QImage VideoReader::get_frame(const int index)
     std::cout << "index " << index << " --> " << files[index] << std::endl;
     QImage qframe(files[index].c_str());
     //TODO: will this get deallocated? what does the copy ctor do?
+    frame_index = index;
     return qframe;
 }
 

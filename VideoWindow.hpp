@@ -28,6 +28,11 @@ protected:
     void keyPressEvent(QKeyEvent *evt) override;
 
 private:
+    inline std::string make_framecount_string(const int findex) {
+        //NOTE: we index from frame 0, hence the -1
+        return std::string {"Frame #: " + std::to_string(findex) + " / " + std::to_string(vreader->get_num_frames()-1)};
+    }
+
     void init_window();
     void set_cfgUI_layout(QHBoxLayout* layout);
     void next_frame();
