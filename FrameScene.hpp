@@ -28,6 +28,7 @@ public:
         //move the existinig 'current' mask annotation over into the full set for the frame
         annotation_locations.emplace_back(std::move(current_mask), current_id);
         current_id = id;
+        this->update();
     }
 
     void set_brushsz(int brushsz) {
