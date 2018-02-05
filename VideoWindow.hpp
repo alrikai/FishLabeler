@@ -37,6 +37,7 @@ private:
     void set_cfgUI_layout(QHBoxLayout* layout);
     void next_frame();
     void prev_frame();
+    void set_frame_incamount();
 
     void set_instanceid();
     void apply_video_offset();
@@ -60,6 +61,7 @@ private:
     QLabel* sec_timestamp;
 
     QLineEdit* instance_idledit;
+    QLineEdit* frame_incledit;
         
     QLineEdit* ql_hour;
     QLineEdit* ql_min;
@@ -67,6 +69,7 @@ private:
     QPushButton* offset_btn;
     QLineEdit* ql_paintsz;
 
+    int frame_incamount;
     std::unique_ptr<VideoReader> vreader;
     std::unique_ptr<VideoLogger> vlogger;
 };

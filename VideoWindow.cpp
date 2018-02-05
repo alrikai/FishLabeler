@@ -24,7 +24,7 @@
  */
 
 VideoWindow::VideoWindow(QWidget *parent)
-    : QMainWindow(parent)
+    : QMainWindow(parent), frame_incamount(1)
 {
     auto filename = QFileDialog::getExistingDirectory(this, 
     tr("Open Fish Video Frame Directory"), QDir::currentPath(), QFileDialog::ShowDirsOnly);
@@ -71,6 +71,12 @@ void VideoWindow::init_window()
     connect(next_btn, &QPushButton::clicked, [this]{
         next_frame();
     });
+
+    frame_incledit = new QLineEdit("1", main_window);
+    connect(frame_incledit, &QLineEdit::editingFinished, [this]{
+        set_frame_incamount();
+    });
+
 
     ql_hour = new QLineEdit("0", main_window);
     ql_min = new QLineEdit("0", main_window);
@@ -129,12 +135,16 @@ void VideoWindow::set_cfgUI_layout(QHBoxLayout* cfg_layout)
     prev_btn->setMinimumSize(min_btn_width, min_btn_height);
     next_btn->setMinimumSize(min_btn_width, min_btn_height);
 
+    auto ql_framejump_txt = new QLabel(main_window);
+    ql_framejump_txt->setText("frame move: ");
+
     constexpr int max_offset_width = 50;
     ql_hour->setMaximumWidth(max_offset_width);
     ql_min->setMaximumWidth(max_offset_width);
     ql_sec->setMaximumWidth(max_offset_width);
     ql_paintsz->setMaximumWidth(max_offset_width);
     instance_idledit->setMaximumWidth(max_offset_width);
+    frame_incledit->setMaximumWidth(max_offset_width);
 
     constexpr int max_offset_text_width = 40;
     ql_hour_txt->setMaximumWidth(max_offset_text_width);
@@ -142,6 +152,7 @@ void VideoWindow::set_cfgUI_layout(QHBoxLayout* cfg_layout)
     ql_sec_txt->setMaximumWidth(max_offset_text_width);
     ql_paintsz_txt->setMaximumWidth(2*max_offset_text_width);
     ql_instanceid_txt->setMaximumWidth(2*max_offset_text_width);
+    ql_framejump_txt->setMaximumWidth(2*max_offset_text_width);
 
     cfg_layout->addWidget(framenum_label);
     cfg_layout->addWidget(hour_timestamp);
@@ -164,6 +175,9 @@ void VideoWindow::set_cfgUI_layout(QHBoxLayout* cfg_layout)
 
     cfg_layout->addWidget(prev_btn);
     cfg_layout->addWidget(next_btn);
+    cfg_layout->addWidget(ql_framejump_txt);
+    cfg_layout->addWidget(frame_incledit);
+ 
 }
 
 void VideoWindow::keyPressEvent(QKeyEvent *evt)
@@ -255,21 +269,21 @@ void VideoWindow::frame_change_metadata(const QImage& vframe, const int old_fram
 void VideoWindow::next_frame()
 {
     const int frame_index = vreader->get_current_frame_index();
-    if (frame_index+1 < vreader->get_num_frames()) {
-        auto vframe = vreader->get_next_frame();
-        //save frame's existing metadata, change frame, and (if applicable) load saved metadata for the new frame
-        frame_change_metadata(vframe, frame_index, frame_index+1);
-    }
+    const int target_frame_index = std::min(frame_index + frame_incamount, vreader->get_num_frames()-1);
+    //auto vframe = vreader->get_next_frame();
+    auto vframe = vreader->get_frame(target_frame_index);
+    //save frame's existing metadata, change frame, and (if applicable) load saved metadata for the new frame
+    frame_change_metadata(vframe, frame_index, target_frame_index);
 }
 
 void VideoWindow::prev_frame()
 {
     const int frame_index = vreader->get_current_frame_index();
-    if (frame_index > 0) {
-        auto vframe = vreader->get_prev_frame();
-        //save frame's existing metadata, change frame, and (if applicable) load saved metadata for the new frame
-        frame_change_metadata(vframe, frame_index, frame_index-1);
-    }
+    const int target_frame_index = std::max(frame_index - frame_incamount, 0);
+    //auto vframe = vreader->get_prev_frame();
+    auto vframe = vreader->get_frame(target_frame_index);
+    //save frame's existing metadata, change frame, and (if applicable) load saved metadata for the new frame
+    frame_change_metadata(vframe, frame_index, target_frame_index);
 }
 
 void VideoWindow::closeEvent(QCloseEvent *evt)
@@ -315,3 +329,8 @@ void VideoWindow::set_instanceid()
     fviewer->set_instance_id(instance_id);
 }
 
+void VideoWindow::set_frame_incamount()
+{
+    auto frame_jump = frame_incledit->text().toInt();
+    frame_incamount = frame_jump;
+}
