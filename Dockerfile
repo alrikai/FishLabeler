@@ -42,6 +42,7 @@ RUN export uid=1000 gid=1000 devname=NRTfish && \
     mkdir -p /home/NRTfish/fishlabeler/build && \
     chmod 7777 -R /home/NRTfish/fishlabeler
 
+RUN useradd -s /bin/bash NRTfish
 USER NRTfish 
 ENV HOME /home/NRTfish
 WORKDIR /home/NRTfish
@@ -56,3 +57,5 @@ ENV QT_VERBOSE true
 ENV QT_TESTING true
 # Xvfb
 ENV DISPLAY :99
+
+ENTRYPOINT cd fishlabeler/build; cmake ..; make -j4; cd ..; /bin/bash

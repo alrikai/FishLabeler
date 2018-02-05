@@ -21,7 +21,7 @@ touch "$VID_INFO_LOG"
 ffprobe -i "$VIDEO_PATH" 2>&1 | tee "$VID_INFO_LOG"
 
 #run the labeler application
-#cd build
+cd build
 #cmake ..
 #make
-#./FishLabeler
+./FishLabeler
