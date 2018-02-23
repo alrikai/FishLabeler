@@ -54,11 +54,11 @@ FrameViewer::FrameViewer(const QImage& initial_frame, QObject* parent)
     annotation_brushsz = 8;
     display_frame(initial_frame);
     mode = ANNOTATION_MODE::BOUNDINGBOX;
+    current_pixframe = nullptr;
 }
 
 void FrameViewer::display_frame(const QImage& frame) 
 {
-
     //if we are doing segmentation, write out whatever the current mask is as well
     if (mode == ANNOTATION_MODE::SEGMENTATION) {
         set_instance_id(current_id);
@@ -74,9 +74,13 @@ void FrameViewer::display_frame(const QImage& frame)
     this->update();
 }
 
-void FrameViewer::drawBackground(QPainter* painter, const QRectF&  rect)
+void FrameViewer::drawBackground(QPainter* painter, const QRectF& rect)
 {
-    this->addPixmap(QPixmap::fromImage(current_frame));
+    if (current_pixframe == nullptr) { 
+        current_pixframe = this->addPixmap(QPixmap::fromImage(current_frame));
+    } else { 
+        current_pixframe->setPixmap(QPixmap::fromImage(current_frame));
+    }
 }
 
 void FrameViewer::drawForeground(QPainter* painter, const QRectF& rect)

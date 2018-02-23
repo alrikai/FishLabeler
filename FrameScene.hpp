@@ -75,7 +75,7 @@ private:
 
     //hold the current frame to be / being displayed
     QImage current_frame;
-
+    QGraphicsPixmapItem* current_pixframe;
     //the (float) coords of the mouse position as the user draws things
     //in segmentation mode
     std::vector<PixelLabelMB> annotation_locations;
