@@ -213,15 +213,14 @@ void VideoWindow::write_frame_metadat(const int old_frame_index)
 
     //check the frame viewer for user-supplied annotations and write them out to disk
     auto fannotations = fview->get_frame_annotations();
-    const int bsz = fviewer->get_brushsz();
     const int fheight = fviewer->get_frame_height();
     const int fwidth = fviewer->get_frame_width();
     if (fannotations.bboxes.size() > 0) {
-        vlogger->write_bboxes(frame_name, std::move(fannotations.bboxes), bsz, fheight, fwidth);
+        vlogger->write_bboxes(frame_name, std::move(fannotations.bboxes), fheight, fwidth);
     }
 
     if (fannotations.segm_points.size() > 0) {
-        vlogger->write_annotations(frame_name, std::move(fannotations.segm_points), bsz, fheight, fwidth);
+        vlogger->write_annotations(frame_name, std::move(fannotations.segm_points), fheight, fwidth);
     }
 }
 

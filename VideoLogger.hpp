@@ -32,8 +32,8 @@ public:
         create_logdirs(text_logdir, "Metadata");
     }
 
-    void write_bboxes(const std::string& framenum, std::vector<BoundingBoxMD>&& annotations, const int ptsz, const int height, const int width);
-    void write_annotations(const std::string& framenum, std::vector<PixelLabelMB>&& annotations, const int ptsz, const int height, const int width);
+    void write_bboxes(const std::string& framenum, std::vector<BoundingBoxMD>&& annotations, const int height, const int width);
+    void write_annotations(const std::string& framenum, std::vector<PixelLabelMB>&& annotations, const int height, const int width);
     void write_textmetadata(const std::string& framenum, std::string&& text_meta);
 
     bool has_annotations(const std::string& framenum) const {

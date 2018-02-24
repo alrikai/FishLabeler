@@ -22,7 +22,7 @@ void VideoLogger::create_logdirs(boost::filesystem::path& logdir, const std::str
 }
 
 //segmentation masks --> logged as an image 
-void VideoLogger::write_annotations(const std::string& framenum, std::vector<PixelLabelMB>&& annotations, const int ptsz, const int height, const int width)
+void VideoLogger::write_annotations(const std::string& framenum, std::vector<PixelLabelMB>&& annotations, const int height, const int width)
 {
     auto fpath = make_filepath(annotation_logdir, framenum, ".png");
     const std::string out_fname = fpath.string(); 
@@ -32,23 +32,17 @@ void VideoLogger::write_annotations(const std::string& framenum, std::vector<Pix
         for (auto mpt : mmask.smask) {
             auto col = mpt.x();
             auto row = mpt.y();
-            //TODO: the brushsz poses a problem here -- if we want to be able to re-load the points unambiguously, we need to 
-            //store the points as well as the brushsize (as otherwise if there are 2 points which overlap due to brushsize, it 
-            //will be impossible to recover all the original points unambiguously). But if we just store the datapoints independent
-            //of brushsz, then we cannot easily store the brushsize.
-            //The other alternative would be to use textfiles for the annotation points (e.g. brushsz, then  point per line), and have
-            //a script offline that goes through and reads the points and generates masks from them. Or, we could just have it output both,
-            //or we could have it just be afunction that runs on the GUI close event. 
-            //But basically, we could get perfect reconstruction if we use a text file, but not if we use images. 
-            log_annotation.at<uint8_t>(int(row), int(col)) = mmask.instance_id; 
+            //NOTE: since we 0-index in the instances, we need to +1 (since 0 is reserved for background)
+            log_annotation.at<uint8_t>(int(row), int(col)) = mmask.instance_id + 1; 
         }
     }
+    std::cout << "logging mask frame to " << out_fname << std::endl;
     cv::imwrite(out_fname, log_annotation);
 }
 
 
 //bounding boxes --> logged in a text file
-void VideoLogger::write_bboxes(const std::string& framenum, std::vector<BoundingBoxMD>&& bbox_rects, const int ptsz, const int height, const int width)
+void VideoLogger::write_bboxes(const std::string& framenum, std::vector<BoundingBoxMD>&& bbox_rects, const int height, const int width)
 {
     auto fpath = make_filepath(bbox_logdir, framenum, ".txt");
     const std::string out_fname = fpath.string(); 
@@ -81,8 +75,31 @@ std::vector<PixelLabelMB> VideoLogger::get_annotations (const std::string& frame
     auto fpath = make_filepath(annotation_logdir, framenum, ".png");
     if (boost::filesystem::exists(fpath)) {
         const std::string frame_fpath = fpath.string();
+        auto mask_img = cv::imread(frame_fpath, CV_LOAD_IMAGE_GRAYSCALE);
 
+        std::map<int, std::vector<QPoint>> instance_segs;
+        for (int row = 0; row < mask_img.rows; row++) {
+            for (int col = 0; col < mask_img.cols; col++) {
+                auto pxlabel = mask_img.at<uint8_t>(row,col);
+                if (pxlabel > 0) {
+                    //NOTE: since we 0-index in the instances, we need to -1 
+                    //(doing it above could overflow on bg labels, unless we also cast the label type, which is annoying...)
+                    pxlabel -= 1;
+                    auto pxkey_it = instance_segs.find(pxlabel); 
+                    if (pxkey_it != instance_segs.end()) {
+                        pxkey_it->second.emplace_back(col, row);
+                    } else {
+                        std::vector<QPoint> new_instancepts {QPoint(col, row)};
+                        instance_segs.emplace(std::make_pair(pxlabel, std::move(new_instancepts)));
+                    }
+                }
+            }
+        }
 
+        for (auto instance_it : instance_segs) {
+            std::cout << "Loading seg instance " << instance_it.first << " --> " << instance_it.second.size() << " #pts" << std::endl; 
+            frame_annotations.emplace_back(std::move(instance_it.second), instance_it.first);
+        } 
     }
     return frame_annotations;
 }

@@ -52,7 +52,10 @@ public:
         return boundingbox_locations;
     }
 
-    std::vector<PixelLabelMB> get_frame_annotations() const {
+    std::vector<PixelLabelMB> get_frame_annotations() {
+        if (current_mask.size() > 0) {
+            annotation_locations.emplace_back(std::move(current_mask), current_id);
+        }
         return annotation_locations;
     }
     
@@ -74,7 +77,7 @@ private:
     void redo_label();
 
     //hold the current frame to be / being displayed
-    QImage current_frame;
+    QPixmap current_frame;
     QGraphicsPixmapItem* current_pixframe;
     //the (float) coords of the mouse position as the user draws things
     //in segmentation mode

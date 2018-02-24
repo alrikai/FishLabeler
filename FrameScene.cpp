@@ -45,6 +45,20 @@ namespace utils {
         const int color_idx = id % NUM_COLORS;
         return annotation_color[color_idx];
     }
+
+    void add_segbrush_pixels(std::vector<QPoint>& current_mask, const int rowpos, const int colpos, const int brushsz)
+    {
+        for (int row_offset = 0; row_offset < brushsz; row_offset++) {
+            //TODO: should we just round down? i.e. make it s.t. all odd-values for brushsz == itself-1?
+            const int row_offset_factor = row_offset - brushsz / 2; 
+            const int rowpos_px = rowpos + row_offset_factor;
+            for (int col_offset = 0; col_offset < brushsz; col_offset++) {
+                const int col_offset_factor = col_offset - brushsz / 2; 
+                QPoint spt {rowpos_px, colpos + col_offset_factor};
+                current_mask.emplace_back(spt);
+            }
+        }
+    }
 }
 
 FrameViewer::FrameViewer(const QImage& initial_frame, QObject* parent)
@@ -64,7 +78,7 @@ void FrameViewer::display_frame(const QImage& frame)
         set_instance_id(current_id);
     }
 
-    current_frame = frame; 
+    current_frame = QPixmap::fromImage(frame); 
 
     //moving to the next frame, so clear out the current frame's annotations
     annotation_locations.clear();
@@ -77,9 +91,9 @@ void FrameViewer::display_frame(const QImage& frame)
 void FrameViewer::drawBackground(QPainter* painter, const QRectF& rect)
 {
     if (current_pixframe == nullptr) { 
-        current_pixframe = this->addPixmap(QPixmap::fromImage(current_frame));
+        current_pixframe = this->addPixmap(current_frame);
     } else { 
-        current_pixframe->setPixmap(QPixmap::fromImage(current_frame));
+        current_pixframe->setPixmap(current_frame);
     }
 }
 
@@ -89,6 +103,8 @@ void FrameViewer::drawForeground(QPainter* painter, const QRectF& rect)
     pen.setWidth(annotation_brushsz);
 
     if (mode == ANNOTATION_MODE::SEGMENTATION) {
+        //we only use the brushsz for the drawing stage to reduce user burden
+        pen.setWidth(1);
         for (int i = 0; i < annotation_locations.size(); i++) {
             auto smask_inst = annotation_locations[i].smask;
             //adjust pen color per instance ID
@@ -96,7 +112,6 @@ void FrameViewer::drawForeground(QPainter* painter, const QRectF& rect)
             painter->setPen(pen);   
             for (auto npt_loc : smask_inst) {
                 painter->drawPoint(npt_loc.x(),npt_loc.y());
-                std::cout << "drawing pt " << npt_loc.x() << ", " << npt_loc.y() << std::endl;
             }
         }
 
@@ -105,7 +120,6 @@ void FrameViewer::drawForeground(QPainter* painter, const QRectF& rect)
         //draw the current mask annotation as well
         for (auto npt_loc : current_mask) {
             painter->drawPoint(npt_loc.x(),npt_loc.y());
-            std::cout << "drawing pt " << npt_loc.x() << ", " << npt_loc.y() << std::endl;
         }
     } else {
         for (auto bbox_md : boundingbox_locations) {
@@ -128,10 +142,10 @@ void FrameViewer::mouseMoveEvent(QGraphicsSceneMouseEvent* mevt)
 {
     if (drawing_annotations) {
         if (mode == ANNOTATION_MODE::SEGMENTATION) {
-            //NOTE: could also use e.g. mevt->scenePos().x(), mevt->scenePos().y()
-            QPoint spt {static_cast<int>(std::round(mevt->scenePos().x())), static_cast<int>(std::round(mevt->scenePos().y()))};
-            current_mask.emplace_back(spt);
-            std::cout << "mpos: " << mevt->scenePos().x() << ", " << mevt->scenePos().y() << std::endl;
+            std::cout << "mpos: " << mevt->scenePos().x() << ", " << mevt->scenePos().y() << " @bsz " << annotation_brushsz << std::endl;
+            const int rowpos_click = static_cast<int>(std::round(mevt->scenePos().x()));
+            const int colpos_click = static_cast<int>(std::round(mevt->scenePos().y()));
+            utils::add_segbrush_pixels(current_mask, rowpos_click, colpos_click, annotation_brushsz);
         } else {
             current_bbox.setBottomRight(QPoint(mevt->scenePos().x(), mevt->scenePos().y()));
         }
@@ -142,11 +156,11 @@ void FrameViewer::mouseMoveEvent(QGraphicsSceneMouseEvent* mevt)
 void FrameViewer::mousePressEvent(QGraphicsSceneMouseEvent* mevt)
 {
     if (mode == ANNOTATION_MODE::SEGMENTATION) {
-        QPoint spt {static_cast<int>(std::round(mevt->scenePos().x())), static_cast<int>(std::round(mevt->scenePos().y()))};
-        current_mask.emplace_back(spt);
-        std::cout << "mpos click: " << mevt->scenePos().x() << ", " << mevt->scenePos().y() << std::endl;
+        std::cout << "mpos: " << mevt->scenePos().x() << ", " << mevt->scenePos().y() << " @bsz " << annotation_brushsz << std::endl;
+        const int rowpos_click = static_cast<int>(std::round(mevt->scenePos().x()));
+        const int colpos_click = static_cast<int>(std::round(mevt->scenePos().y()));
+        utils::add_segbrush_pixels(current_mask, rowpos_click, colpos_click, annotation_brushsz);
     } else {
-
         auto mdata_item = itemAt(mevt->pos(), QTransform());
         if (mdata_item) {
             std::cout << "clicked on item " << mdata_item << std::endl;
@@ -164,9 +178,10 @@ void FrameViewer::mousePressEvent(QGraphicsSceneMouseEvent* mevt)
 void FrameViewer::mouseReleaseEvent(QGraphicsSceneMouseEvent* mevt)
 {
     if (mode == ANNOTATION_MODE::SEGMENTATION) {
-        QPoint spt {static_cast<int>(std::round(mevt->scenePos().x())), static_cast<int>(std::round(mevt->scenePos().y()))};
-        current_mask.emplace_back(spt);
-        std::cout << "mpos rel: " << mevt->scenePos().x() << ", " << mevt->scenePos().y() << std::endl;
+        std::cout << "mpos: " << mevt->scenePos().x() << ", " << mevt->scenePos().y() << " @bsz " << annotation_brushsz << std::endl;
+        const int rowpos_click = static_cast<int>(std::round(mevt->scenePos().x()));
+        const int colpos_click = static_cast<int>(std::round(mevt->scenePos().y()));
+        utils::add_segbrush_pixels(current_mask, rowpos_click, colpos_click, annotation_brushsz);
     } else {
         current_bbox.setBottomRight(QPoint(mevt->scenePos().x(), mevt->scenePos().y()));
         boundingbox_locations.emplace_back(current_bbox, current_id);
@@ -178,8 +193,12 @@ void FrameViewer::mouseReleaseEvent(QGraphicsSceneMouseEvent* mevt)
 void FrameViewer::undo_label()
 {
     if (mode == ANNOTATION_MODE::SEGMENTATION) {
-        utils::point_un_redo(current_mask, limbo_points);
-        //TODO: do we need to propogate this to the annotation_locations as well?
+        //TODO: if the brushsz changes from when the point was originally drawn, this will not be correct
+        const int num_pts_remove = annotation_brushsz*annotation_brushsz;
+        utils::point_un_redo(current_mask, limbo_points, num_pts_remove);
+
+        //TODO: do we need to propogate this to the annotation_locations as well? --> if limbo pts is empty, might make sense to continue the removeal into 
+        //the ending of annotation_locations as well, so that we can undo for longer
     } else {
         utils::point_un_redo(boundingbox_locations, limbo_bboxes);
     }
@@ -189,6 +208,7 @@ void FrameViewer::undo_label()
 void FrameViewer::redo_label()
 {
     if (mode == ANNOTATION_MODE::SEGMENTATION) {
+        //TODO: need th brush size as well?
         utils::point_un_redo(limbo_points, current_mask);
         //TODO: do we need to propogate this to the annotation_locations as well?
     } else {
