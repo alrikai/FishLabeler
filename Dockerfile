@@ -11,7 +11,7 @@ LABEL maintainer="Alrik Firl firla@oregonstate.edu" \
 #RUN echo "deb http://archive.ubuntu.com/ubuntu precise main universe" > /etc/apt/sources.list
 
 # Update packages
-RUN apt-get update
+RUN apt-get update --fix-missing
 
 # Install system tools / libraries
 RUN apt-get -y install build-essential \
@@ -28,7 +28,6 @@ RUN apt-get -y install build-essential \
     libopencv-dev   
 
 RUN apt-get -y install qt5-default  
-#RUN apt-get -y install firefox  
 
 #(userid): id -u alrik --> 1000, (groupid): id -g  alrik--> 1000 (this presumably has to be changed if not the 1st user on the system?)
 RUN export uid=1000 gid=1000 devname=NRTfish && \

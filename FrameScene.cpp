@@ -229,6 +229,11 @@ void FrameViewer::keyPressEvent(QKeyEvent *evt)
                 std::cout << "REDO key" << std::endl;
                 redo_label();
                 break;
+                /*
+                 * NOTE: this got moved to the main window, I dont think I want a bi-directional 
+                 * communication between the viewer and the main UI for this. Plus, the hotkeys
+                 * only worked as intended when the window had focus, but one usully wants to set
+                 * the annotation mode before clicking on the image
             case Qt::Key_B:
                 std::cout << "BOUNDING_BOX key" << std::endl;
                 mode = ANNOTATION_MODE::BOUNDINGBOX;
@@ -237,6 +242,7 @@ void FrameViewer::keyPressEvent(QKeyEvent *evt)
                 std::cout << "SEGMENTATION key" << std::endl;
                 mode = ANNOTATION_MODE::SEGMENTATION;
                 break;
+                */
             default:
                 std::cout << "key: " << evt->key() << std::endl;
         }

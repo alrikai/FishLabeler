@@ -28,6 +28,7 @@ protected:
     void keyPressEvent(QKeyEvent *evt) override;
 
 private:
+
     inline std::string make_framecount_string(const int findex) {
         //NOTE: we index from frame 0, hence the -1
         return std::string {"Frame #: " + std::to_string(findex) + " / " + std::to_string(vreader->get_num_frames()-1)};
@@ -39,6 +40,7 @@ private:
     void prev_frame();
     void set_frame_incamount();
 
+    void cycle_label_mode();
     void set_instanceid();
     void apply_video_offset();
     void adjust_paintbrush_size();
@@ -53,6 +55,7 @@ private:
 
     QWidget* main_window;
     QPlainTextEdit* metadata_edit;
+    QPushButton* labelmode_btn;
     QPushButton* prev_btn; 
     QPushButton* next_btn; 
     QLabel* framenum_label;
@@ -69,6 +72,7 @@ private:
     QPushButton* offset_btn;
     QLineEdit* ql_paintsz;
 
+    ANNOTATION_MODE label_mode;
     int frame_incamount;
     std::unique_ptr<VideoReader> vreader;
     std::unique_ptr<VideoLogger> vlogger;

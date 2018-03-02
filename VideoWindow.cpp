@@ -37,6 +37,10 @@ VideoWindow::VideoWindow(QWidget *parent)
     main_window = new QWidget(this);
     setCentralWidget(main_window);
     fviewer = std::make_shared<FrameViewer>(initial_frame, main_window);
+
+    label_mode = ANNOTATION_MODE::BOUNDINGBOX;
+    fviewer->set_annotation_mode(label_mode);
+
     init_window();
 
     //TODO: for whatever reason, this causes a memory leak until the frame is cycled. No idea why though
@@ -77,7 +81,6 @@ void VideoWindow::init_window()
         set_frame_incamount();
     });
 
-
     ql_hour = new QLineEdit("0", main_window);
     ql_min = new QLineEdit("0", main_window);
     ql_sec = new QLineEdit("0", main_window);
@@ -97,8 +100,13 @@ void VideoWindow::init_window()
     auto metadata_textlabel = new QLabel(main_window);
     metadata_textlabel->setText("Frame Metadata:");
     metadata_edit = new QPlainTextEdit(main_window);
+    labelmode_btn = new QPushButton("Label Mode", main_window);
+    connect(labelmode_btn, &QPushButton::clicked, [this]{
+        cycle_label_mode();
+    });
 
     QVBoxLayout* rhs_layout = new QVBoxLayout;
+    rhs_layout->addWidget(labelmode_btn);
     rhs_layout->addWidget(metadata_textlabel);
     rhs_layout->addWidget(metadata_edit);
 
@@ -106,11 +114,11 @@ void VideoWindow::init_window()
     auto fview_p = fviewer.get();
     fview = new FrameView(fview_p);
     lhs_layout->addWidget(fview);
+    lhs_layout->addLayout(rhs_layout);
 
     QVBoxLayout* main_layout = new QVBoxLayout;
     main_layout->addLayout(lhs_layout);
     main_layout->addLayout(cfg_layout);
-    main_layout->addLayout(rhs_layout);
     main_window->setLayout(main_layout);
     main_window->setWindowTitle("Fish Labeler");
 
@@ -314,6 +322,28 @@ void VideoWindow::apply_video_offset()
 
     //save frame's existing metadata, change frame, and (if applicable) load saved metadata for the new frame
     frame_change_metadata(vframe, frame_index, curr_fidx);
+}
+
+void VideoWindow::cycle_label_mode()
+{
+    //TODO: do I want to have the count as the last annotation mode, or have this stored in some 
+    //centralized location?
+    static constexpr int NUM_ANNOTATION_MODES = 2;
+    auto new_mode_idx = (static_cast<int>(label_mode) + 1) % NUM_ANNOTATION_MODES;
+    label_mode = static_cast<ANNOTATION_MODE>(new_mode_idx);
+
+    //this works because we have 2 modes, and because we can abuse automatic conversions from 
+    //no-class enums to ints. 
+
+    //TODO: also change the button color?
+    if (label_mode == ANNOTATION_MODE::BOUNDINGBOX) {
+        labelmode_btn->setText("Detection");
+    } else {
+        labelmode_btn->setText("Segmentation");
+    }
+
+    //notify the frame viewer that the mode changed (this should replace the cntrl + s / contrl + d hotkeys)
+    fviewer->set_annotation_mode(label_mode);
 }
 
 void VideoWindow::adjust_paintbrush_size()

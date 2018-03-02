@@ -31,6 +31,10 @@ public:
         this->update();
     }
 
+    void set_annotation_mode(ANNOTATION_MODE annotation_mode) {
+        mode = annotation_mode;
+    }
+
     void set_brushsz(int brushsz) {
         annotation_brushsz = brushsz;
         this->update();

@@ -5,8 +5,8 @@
 #include <QRect>
 #include <QPoint>
 
-enum class ANNOTATION_MODE {
-    SEGMENTATION,
+enum class ANNOTATION_MODE : int{
+    SEGMENTATION = 0,
     BOUNDINGBOX
 };
 

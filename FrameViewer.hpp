@@ -42,6 +42,10 @@ public:
         this->update();
     }
 
+    void set_annotation_mode(ANNOTATION_MODE mode) {
+        fviewer->set_annotation_mode(mode);
+    }
+
 protected:
     //for zooming into the scene -- hold down control to zoom (versus just scrolling up and down)
     void wheelEvent(QWheelEvent*) override;
