@@ -1,6 +1,8 @@
 #ifndef FISHLABELER_FRAMESCENE_HPP
 #define FISHLABELER_FRAMESCENE_HPP
 
+#include <memory>
+
 #include <QWidget>
 #include <QObject>
 #include <QGraphicsScene>
@@ -10,6 +12,7 @@
 #include <QPoint>
 
 #include "AnnotationTypes.hpp"
+#include "BoundingBoxViz.hpp"
 
 class FrameViewer : public QGraphicsScene
 {
@@ -53,7 +56,11 @@ public:
     }
 
     std::vector<BoundingBoxMD> get_bounding_boxes() const {
-        return boundingbox_locations;
+        std::vector<BoundingBoxMD> bbox_md;
+        for (auto bbox_it : boundingbox_locations) {
+            bbox_md.emplace_back(bbox_it->get_bbox_metadata());
+        }
+        return bbox_md;
     }
 
     std::vector<PixelLabelMB> get_frame_annotations() {
@@ -64,7 +71,10 @@ public:
     }
     
     void set_metadata(FrameAnnotations&& metadata) {
-        boundingbox_locations.insert(boundingbox_locations.end(), metadata.bboxes.begin(), metadata.bboxes.end());
+        for (auto mdata_bbox_it : metadata.bboxes) {
+            boundingbox_locations.emplace_back(std::make_shared<BoundingBoxViz>(mdata_bbox_it));
+            //boundingbox_locations.insert(boundingbox_locations.end(), metadata.bboxes.begin(), metadata.bboxes.end());
+        }
         annotation_locations.insert(annotation_locations.end(), metadata.segm_points.begin(), metadata.segm_points.end());
     }
 
@@ -90,9 +100,10 @@ private:
     std::vector<QPoint> current_mask;
 
     //the bounding box coordinates when the user is drawing in bounding box mode
-    std::vector<BoundingBoxMD> boundingbox_locations;
-    std::vector<BoundingBoxMD> limbo_bboxes;
-    QRect current_bbox;
+    using bbox_metadata_t = std::shared_ptr<BoundingBoxViz>; //BoundingBoxMD;
+    std::vector<bbox_metadata_t> boundingbox_locations;
+    std::vector<bbox_metadata_t> limbo_bboxes;
+    bbox_metadata_t current_bbox;
 
     QGraphicsTextItem cursor;
     int annotation_brushsz;
