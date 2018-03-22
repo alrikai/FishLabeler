@@ -23,12 +23,19 @@
  * - make mouse capture times for annotations faster
  */
 
-VideoWindow::VideoWindow(QWidget *parent)
+VideoWindow::VideoWindow(std::vector<std::string>&& labeler_args, QWidget *parent)
     : QMainWindow(parent), frame_incamount(1)
 {
-    auto filename = QFileDialog::getExistingDirectory(this, 
-    tr("Open Fish Video Frame Directory"), QDir::currentPath(), QFileDialog::ShowDirsOnly);
-    const std::string vpath = filename.toStdString(); 
+    std::string vpath;
+    if (labeler_args.size() > 0) {
+        //TODO: should I do some sanity check to see if it's a valid path?
+        vpath = labeler_args[0];
+    } else {
+        auto filename = QFileDialog::getExistingDirectory(this, 
+        tr("Open Fish Video Frame Directory"), QDir::currentPath(), QFileDialog::ShowDirsOnly);
+        vpath = filename.toStdString(); 
+    }
+
     vreader = std::make_unique<VideoReader> (vpath);
     auto initial_frame = vreader->get_next_frame();
 

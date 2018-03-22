@@ -1,5 +1,5 @@
-#ifndef BOUNDING_BOX_VIZ_H
-#define BOUNDING_BOX_VIZ_H
+#ifndef FISHLABELER_BOUNDING_BOX_VIZ_H
+#define FISHLABELER_BOUNDING_BOX_VIZ_H
 
 #include <iostream>
 
@@ -60,6 +60,8 @@ public:
     void set_id(const int id) {
         bbox_id = id;
     }
+
+    bool intersects_bbox_frame(const QPointF click_pos, const int brushsz) const;
 
 protected slots:
     void mouseMoveEvent(QGraphicsSceneMouseEvent*) override;

@@ -110,6 +110,11 @@ private:
     bool drawing_annotations;
     int current_id;
 
+    //TODO: figure out a cleaner way to have these -- this is for adjusting the bounding boxes, maybe we should move to using
+    //policies for the annotation type being done or something
+    int selected_bbox;
+    QPointF selected_bbox_pt;
+
     ANNOTATION_MODE mode;
 };
 

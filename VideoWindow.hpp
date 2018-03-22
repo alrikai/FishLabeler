@@ -21,7 +21,7 @@ class VideoWindow : public QMainWindow
 {
     Q_OBJECT
 public:
-    explicit VideoWindow(QWidget *parent = 0);
+    explicit VideoWindow(std::vector<std::string>&& labeler_args, QWidget *parent = 0);
     
 protected:
     void closeEvent(QCloseEvent *evt) override;

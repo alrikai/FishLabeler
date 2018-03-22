@@ -32,3 +32,8 @@ set(FLHDRS AnnotationProcessing.hpp VideoReader.hpp VideoWindow.hpp FrameViewer.
 add_executable(FishLabeler ${FLSRCS} ${FLHDRS})
 target_link_libraries(FishLabeler ${Boost_LIBRARIES} ${OpenCV_LIBS} Qt5::Widgets) 
 
+
+set(interpsrcs interpolate_main.cpp VideoReader.cpp VideoLogger.cpp)  
+set(interphdrs DetectionInterpolate.hpp VideoReader.hpp VideoLogger.hpp)  
+add_executable(FishInterp ${interpsrcs} ${interphdrs})
+target_link_libraries(FishInterp ${Boost_LIBRARIES} ${OpenCV_LIBS} Qt5::Widgets) 

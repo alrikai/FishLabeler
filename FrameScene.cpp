@@ -70,6 +70,7 @@ FrameViewer::FrameViewer(const QImage& initial_frame, QObject* parent)
     display_frame(initial_frame);
     mode = ANNOTATION_MODE::BOUNDINGBOX;
     current_pixframe = nullptr;
+    selected_bbox = -1;
 }
 
 void FrameViewer::display_frame(const QImage& frame) 
@@ -88,7 +89,9 @@ void FrameViewer::display_frame(const QImage& frame)
         this->removeItem(bbox_item.get());
     }
     boundingbox_locations.clear();
-    this->removeItem(current_bbox.get());
+    if (current_bbox) {
+        this->removeItem(current_bbox.get());
+    }
     limbo_bboxes.clear();
     this->update();
 }
@@ -138,7 +141,7 @@ void FrameViewer::drawForeground(QPainter* painter, const QRectF& rect)
         pen.setBrush(Qt::lightGray);
         painter->setPen(pen);   
         //draw the current_bbox only if it is currently being drawn (and thus not in the boundingbox_locations vector)
-        if (drawing_annotations) {
+        if (drawing_annotations && current_bbox) {
             current_bbox->paint(painter, nullptr, nullptr);
         }
     }
@@ -154,7 +157,10 @@ void FrameViewer::mouseMoveEvent(QGraphicsSceneMouseEvent* mevt)
             const int colpos_click = static_cast<int>(std::round(mevt->scenePos().y()));
             utils::add_segbrush_pixels(current_mask, rowpos_click, colpos_click, annotation_brushsz);
         } else {
-            current_bbox->get_bounding_box().setBottomRight(QPoint(mevt->scenePos().x(), mevt->scenePos().y()));
+            //TODO: consider if we want to re-draw the bounding box as the mouse moves
+            if (selected_bbox < 0 && current_bbox) {
+                current_bbox->get_bounding_box().setBottomRight(QPoint(mevt->scenePos().x(), mevt->scenePos().y()));
+            }
         }
         this->update();
     }
@@ -168,24 +174,42 @@ void FrameViewer::mousePressEvent(QGraphicsSceneMouseEvent* mevt)
     } else {
         std::cout << "Mouse Click Accepted" << std::endl;
     }
+    std::cout << "mpos: " << mevt->scenePos().x() << ", " << mevt->scenePos().y() << " @bsz " << annotation_brushsz << std::endl;
 
     if (mode == ANNOTATION_MODE::SEGMENTATION) {
-        std::cout << "mpos: " << mevt->scenePos().x() << ", " << mevt->scenePos().y() << " @bsz " << annotation_brushsz << std::endl;
         const int rowpos_click = static_cast<int>(std::round(mevt->scenePos().x()));
         const int colpos_click = static_cast<int>(std::round(mevt->scenePos().y()));
         utils::add_segbrush_pixels(current_mask, rowpos_click, colpos_click, annotation_brushsz);
     } else {
-        auto mdata_item = itemAt(mevt->pos(), QTransform());
-        if (mdata_item) {
-            std::cout << "clicked on item " << mdata_item << std::endl;
-            mdata_item->setFocus();
-        } else {
-            std::cout << "did not click on item " << std::endl;
+
+        for (int bbox_idx = 0; bbox_idx < boundingbox_locations.size(); bbox_idx++) {
+            if (boundingbox_locations[bbox_idx]->intersects_bbox_frame(mevt->scenePos(), annotation_brushsz)) {
+                selected_bbox = bbox_idx;
+                break;
+            }
         }
-        static const QSize default_bbox_sz {0, 0};
-        auto current_bbox_rect = QRect(QPoint(mevt->scenePos().x(), mevt->scenePos().y()), default_bbox_sz);
-        current_bbox = std::make_shared<BoundingBoxViz>(current_bbox_rect, current_id);
-        this->addItem(current_bbox.get());
+
+        //if we clicked on a bounding box, modify that bounding box. If not, then add a new one
+        if (selected_bbox >= 0) {
+            std::cout << "Clicked on BBOX @ID " << boundingbox_locations[selected_bbox]->get_id() << std::endl;
+            selected_bbox_pt = mevt->scenePos();
+            //NOTE: we can somehow get to the point where we undo a box, then drag a different box, and the undone one shows up during the dragging.
+            //Need to see why this happens
+            current_bbox = nullptr;
+        } else {
+            auto mdata_item = itemAt(mevt->pos(), QTransform());
+            if (mdata_item) {
+                std::cout << "clicked on item " << mdata_item << std::endl;
+                mdata_item->setFocus();
+            } else {
+                std::cout << "did not click on item " << std::endl;
+            }
+            static const QSize default_bbox_sz {0, 0};
+            auto current_bbox_rect = QRect(QPoint(mevt->scenePos().x(), mevt->scenePos().y()), default_bbox_sz);
+            current_bbox = std::make_shared<BoundingBoxViz>(current_bbox_rect, current_id);
+            this->addItem(current_bbox.get());
+            selected_bbox = -1;
+        }
     }
 
     drawing_annotations = true;
@@ -201,10 +225,20 @@ void FrameViewer::mouseReleaseEvent(QGraphicsSceneMouseEvent* mevt)
         const int colpos_click = static_cast<int>(std::round(mevt->scenePos().y()));
         utils::add_segbrush_pixels(current_mask, rowpos_click, colpos_click, annotation_brushsz);
     } else {
-        current_bbox->get_bounding_box().setBottomRight(QPoint(mevt->scenePos().x(), mevt->scenePos().y()));
-        current_bbox->set_id(current_id);
-        //NOTE: current_bbox will have already been added to the scene
-        boundingbox_locations.emplace_back(current_bbox);
+        if (selected_bbox >= 0) {
+            auto bbox_moveamt = mevt->scenePos() - selected_bbox_pt;
+            QPoint bbox_movement {std::rint(bbox_moveamt.x()), std::rint(bbox_moveamt.y())};
+            std::cout << "Moving bbox by " << bbox_movement.x() << ", " <<  bbox_movement.y() << std::endl;
+
+            boundingbox_locations[selected_bbox]->get_bounding_box().translate(bbox_movement); 
+        } else {
+            if (current_bbox) {
+                current_bbox->get_bounding_box().setBottomRight(QPoint(mevt->scenePos().x(), mevt->scenePos().y()));
+                current_bbox->set_id(current_id);
+                //NOTE: current_bbox will have already been added to the scene
+                boundingbox_locations.emplace_back(current_bbox);
+            }
+        }
     }
     drawing_annotations = false;
     this->update();

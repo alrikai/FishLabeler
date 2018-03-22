@@ -6,19 +6,29 @@ int main(int argc, char *argv[])
 {
     //Q_INIT_RESOURCE(application);
 
-    QApplication app(argc, argv);
+    QApplication fishlabeler(argc, argv);
     QCoreApplication::setOrganizationName("Alrik Firl");
     QCoreApplication::setApplicationName("Fish Labeler");
     QCoreApplication::setApplicationVersion(QT_VERSION_STR);
 
-    VideoWindow video_window;
+    std::vector<std::string> fishlabeler_args;
+    QStringList args = fishlabeler.arguments();
+    if (args.count() > 1) {
+        for (int i = 1; i < args.count(); i++) {
+            fishlabeler_args.push_back(args[i].toStdString());
+        }
+    }
+
+    VideoWindow video_window {std::move(fishlabeler_args)};
     video_window.show();
-    return app.exec();
+    return fishlabeler.exec();
 }
+
+
 
 #else
 
-
+#if 0
 #include <opencv2/opencv.hpp>
 
 #include <string>
@@ -57,9 +67,31 @@ int main() {
     using dtype_t = uint8_t;
     dtype_t instance_id = 255;
     mask_utils::fill_segment<dtype_t>(out_img, pts, brushsz, instance_id);
+}
+#else
 
+#include <cstring>
+#include <chrono>
+#include <thread>
 
+#include "VideoReader.hpp"
+
+int main() {
+    
+    const std::string vpath {"/home/alrik/Data/NRTFishAnnotations/20140711121827"};
+    auto vreader = std::make_unique<VideoReader> (vpath);
+    auto initial_frame = vreader->get_next_frame();
+
+    const int num_frames = 100;
+    for (int i = 0; i < num_frames; i++) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+
+        auto frame = vreader->get_next_frame();
+        std::cout << "frame @ [" << frame.height() << " x " << frame.width() << "]" << std::endl; 
+    }
 
 
 }
+
+#endif
 #endif
