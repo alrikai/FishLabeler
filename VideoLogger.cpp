@@ -26,18 +26,30 @@ void VideoLogger::write_annotations(const std::string& framenum, std::vector<Pix
 {
     auto fpath = make_filepath(annotation_logdir, framenum, ".png");
     const std::string out_fname = fpath.string(); 
-    cv::Mat log_annotation = cv::Mat::zeros(height, width, CV_8UC1);
-    for (auto mmask : annotations) {
-        //each of these will be a different instance
-        for (auto mpt : mmask.smask) {
-            auto col = mpt.x();
-            auto row = mpt.y();
-            //NOTE: since we 0-index in the instances, we need to +1 (since 0 is reserved for background)
-            log_annotation.at<uint8_t>(int(row), int(col)) = mmask.instance_id + 1; 
+
+    //write out the annotation (if it exists), and if there now is no annotation, but one exists on disk, delete it
+    if (annotations.size() > 0) {
+        cv::Mat log_annotation = cv::Mat::zeros(height, width, CV_8UC1);
+        for (auto mmask : annotations) {
+            //each of these will be a different instance
+            for (auto mpt : mmask.smask) {
+                auto col = mpt.x();
+                auto row = mpt.y();
+                //NOTE: since we 0-index in the instances, we need to +1 (since 0 is reserved for background)
+                log_annotation.at<uint8_t>(int(row), int(col)) = mmask.instance_id + 1; 
+            }
+        }
+        std::cout << "logging mask frame to " << out_fname << std::endl;
+        cv::imwrite(out_fname, log_annotation);
+    } else {
+        if (boost::filesystem::exists(out_fname)) {
+            //NOTE: we want to just delete the file, since that frame's annotations have been removed
+            //TODO: delete the file
+            boost::filesystem::path rmpath {out_fname};
+            boost::filesystem::remove(rmpath);
+            std::cout << "NOTE: removing mask file " << out_fname << std::endl;
         }
     }
-    std::cout << "logging mask frame to " << out_fname << std::endl;
-    cv::imwrite(out_fname, log_annotation);
 }
 
 
@@ -47,15 +59,27 @@ void VideoLogger::write_bboxes(const std::string& framenum, std::vector<Bounding
     auto fpath = make_filepath(bbox_logdir, framenum, ".txt");
     const std::string out_fname = fpath.string(); 
 
-    std::ofstream fout(out_fname);
-    //top left and bottom right coordinates
-    int tl_x, tl_y, br_x, br_y;
-    for (auto bbox_md : bbox_rects) {
-        auto id = bbox_md.instance_id;
-        bbox_md.bbox.getCoords(&tl_x, &tl_y, &br_x, &br_y);
-        fout << id << ", " << tl_x << ", " << tl_y << ", " << br_x << ", " << br_y << "\n";
+    //NOTE: if we want to undo previously written boxes, we need to do this check 
+    bool has_annotation = bbox_rects.size() > 0;
+    if (has_annotation) {
+        std::ofstream fout(out_fname);
+        //top left and bottom right coordinates
+        int tl_x, tl_y, br_x, br_y;
+        for (auto bbox_md : bbox_rects) {
+            auto id = bbox_md.instance_id;
+            bbox_md.bbox.getCoords(&tl_x, &tl_y, &br_x, &br_y);
+            fout << id << ", " << tl_x << ", " << tl_y << ", " << br_x << ", " << br_y << "\n";
+        }
+        fout.close();
+    } else {
+        if (boost::filesystem::exists(out_fname)) {
+            //NOTE: we want to just delete the file, since that frame's annotations have been removed
+            //TODO: delete the file
+            std::cout << "NOTE: removing detection file " << out_fname << std::endl;
+            boost::filesystem::path rmpath {out_fname};
+            boost::filesystem::remove(rmpath);
+        }
     }
-    fout.close();
 }
 
 void VideoLogger::write_textmetadata(const std::string& framenum, std::string&& text_meta)

@@ -182,6 +182,8 @@ void FrameViewer::mousePressEvent(QGraphicsSceneMouseEvent* mevt)
         utils::add_segbrush_pixels(current_mask, rowpos_click, colpos_click, annotation_brushsz);
     } else {
 
+        //reset the current selection
+        selected_bbox = -1;
         for (int bbox_idx = 0; bbox_idx < boundingbox_locations.size(); bbox_idx++) {
             if (boundingbox_locations[bbox_idx]->intersects_bbox_frame(mevt->scenePos(), annotation_brushsz)) {
                 selected_bbox = bbox_idx;

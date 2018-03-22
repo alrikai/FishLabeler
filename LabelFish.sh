@@ -24,4 +24,5 @@ ffprobe -i "$VIDEO_PATH" 2>&1 | tee "$VID_INFO_LOG"
 cd build
 #cmake ..
 #make
-./FishLabeler
+#NOTE: this will run the labeling on the data just extracted. Can run manually to select different directories
+./FishLabeler "$OUTPUT_DIR" 

@@ -230,11 +230,22 @@ void VideoWindow::write_frame_metadat(const int old_frame_index)
     auto fannotations = fview->get_frame_annotations();
     const int fheight = fviewer->get_frame_height();
     const int fwidth = fviewer->get_frame_width();
-    if (fannotations.bboxes.size() > 0) {
+
+    /* TODO: need to figure out how I want ot handle this part. We want to be able to delete annotations,
+     * even if it is the last annotation on the frame (i.e. go in and delete the mask image or the detection
+     * bounding box text file). However, we only want to delete it if it is truly meant to be removed. So
+     * at the moment, this will work, unless we switch labeling modes within a given frame (i.e. if we do
+     * detection AND segmentation simultaneously for a given frame). Which is possible, so I would call thi a 
+     * bug. However, I'm not sure how best to resolve it yet. 
+     */
+
+    //if (fannotations.bboxes.size() > 0) {
+    if (label_mode == ANNOTATION_MODE::BOUNDINGBOX) {
         vlogger->write_bboxes(frame_name, std::move(fannotations.bboxes), fheight, fwidth);
     }
 
-    if (fannotations.segm_points.size() > 0) {
+    //if (fannotations.segm_points.size() > 0) {
+    if (label_mode == ANNOTATION_MODE::SEGMENTATION) {
         vlogger->write_annotations(frame_name, std::move(fannotations.segm_points), fheight, fwidth);
     }
 }
