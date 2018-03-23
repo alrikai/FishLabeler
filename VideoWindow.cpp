@@ -45,6 +45,8 @@ VideoWindow::VideoWindow(std::vector<std::string>&& labeler_args, QWidget *paren
     setCentralWidget(main_window);
     fviewer = std::make_shared<FrameViewer>(initial_frame, main_window);
 
+    interpolation_panel = new InterpolatePanel(main_window);
+
     label_mode = ANNOTATION_MODE::BOUNDINGBOX;
     fviewer->set_annotation_mode(label_mode);
 
@@ -116,6 +118,7 @@ void VideoWindow::init_window()
     rhs_layout->addWidget(labelmode_btn);
     rhs_layout->addWidget(metadata_textlabel);
     rhs_layout->addWidget(metadata_edit);
+    rhs_layout->addWidget(interpolation_panel);
 
     QHBoxLayout* lhs_layout = new QHBoxLayout;
     auto fview_p = fviewer.get();

@@ -2,7 +2,8 @@
 #define FISHLABELER_VIDEOWINDOW_HPP
 
 #include <memory>
-
+#include <string>
+#include <vector>
 
 #include <QMainWindow>
 #include <QPlainTextEdit>
@@ -16,6 +17,7 @@
 #include "VideoReader.hpp"
 #include "FrameViewer.hpp"
 #include "VideoLogger.hpp"
+#include "InterpolatePanel.hpp"
 
 class VideoWindow : public QMainWindow
 {
@@ -52,6 +54,7 @@ private:
     //TODO: figure out if Qt manages the lifetime, or if I do...
     std::shared_ptr<FrameViewer> fviewer;
     FrameView* fview;
+    InterpolatePanel* interpolation_panel;
 
     QWidget* main_window;
     QPlainTextEdit* metadata_edit;
