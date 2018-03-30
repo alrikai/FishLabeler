@@ -42,7 +42,6 @@ namespace utils {
             Qt::lightGray
         }};
 
-        std::cout << "Color for ID " << id << std::endl;
         const int color_idx = id % NUM_COLORS;
         return annotation_color[color_idx];
     }
@@ -72,6 +71,7 @@ FrameViewer::FrameViewer(const QImage& initial_frame, QObject* parent)
     current_pixframe = nullptr;
     selected_bbox = -1;
     emit_bbox = false;
+    current_id = 0;
 }
 
 void FrameViewer::display_frame(const QImage& frame) 
