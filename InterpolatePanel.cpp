@@ -39,7 +39,12 @@ Interpolatemetadata::Interpolatemetadata(const std::string& meta_label, QWidget*
         //based on this's 'label'. Not sure how this would generalize to more than 2 bounding boxes (or rather, it wouldn't) 
         //MAYBE -- need to use tristate, for inactive, active, and selected as the 3 modes. 
         int interp_idx = (this->label == "LHS" ? 0 : 1);
-        emit interpolate_ready(interp_idx, state);
+        bool activate_interp = (state == Qt::Checked);
+        if (activate_interp) {
+            emit interpolate_ready(interp_idx, state);
+        } else {
+            std::cout << "disabling " << label << " interpolation" << std::endl; 
+        }
     });
 
     frame_num_text = new QLabel(make_fnum_label(frame_num).c_str(), this);
@@ -81,6 +86,10 @@ void InterpolatePanel::interpolate_frames()
         augment_bboxes.emplace_back(bbox.get_rect<int>(), lhs_fdata.id);
     }
     emit interpolated_annotations(augment_bboxes, lhs_fdata.fnum);
+
+    //TODO: reset the LHS and RHS checkboxes, but keep the goto buttons active (so, just visually uncheck them)
+    lhs_metadata->get_checkbox()->setCheckState(Qt::Unchecked);
+    rhs_metadata->get_checkbox()->setCheckState(Qt::Unchecked);
 }
 
 void Interpolatemetadata::goto_frame()

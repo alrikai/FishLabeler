@@ -56,6 +56,10 @@ public:
         instance_id_text->setText(make_instid_label(instance_id).c_str());
     }
 
+    QCheckBox* get_checkbox() const {
+        return selected_cbox;
+    }
+
 signals:
     void interpolate_ready(const int interp_idx, const Qt::CheckState cstate);
     void interpolate_goto(const int frame_idx);
