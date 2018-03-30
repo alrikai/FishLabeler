@@ -29,6 +29,11 @@ protected:
     void closeEvent(QCloseEvent *evt) override;
     void keyPressEvent(QKeyEvent *evt) override;
 
+public slots:
+    void interpolate_select(int interp_idx, const Qt::CheckState cstate);
+    void interpolate_jump(const int frame_idx);
+    void accept_interpolations(const std::vector<BoundingBoxMD>& annotation_bbox, const int lhs_fnum);
+
 private:
 
     inline std::string make_framecount_string(const int findex) {
@@ -51,10 +56,13 @@ private:
     void write_frame_metadat(const int old_frame_index);
     void retrieve_frame_metadata(const int new_frame_index);
 
+    void set_bbox(const QRect& bbox, const int current_id);
+
     //TODO: figure out if Qt manages the lifetime, or if I do...
     std::shared_ptr<FrameViewer> fviewer;
     FrameView* fview;
     InterpolatePanel* interpolation_panel;
+    int active_interpidx;
 
     QWidget* main_window;
     QPlainTextEdit* metadata_edit;

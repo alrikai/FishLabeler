@@ -71,6 +71,7 @@ FrameViewer::FrameViewer(const QImage& initial_frame, QObject* parent)
     mode = ANNOTATION_MODE::BOUNDINGBOX;
     current_pixframe = nullptr;
     selected_bbox = -1;
+    emit_bbox = false;
 }
 
 void FrameViewer::display_frame(const QImage& frame) 
@@ -239,6 +240,10 @@ void FrameViewer::mouseReleaseEvent(QGraphicsSceneMouseEvent* mevt)
                 current_bbox->set_id(current_id);
                 //NOTE: current_bbox will have already been added to the scene
                 boundingbox_locations.emplace_back(current_bbox);
+                if (emit_bbox) {
+                    emit bounding_box_created(current_bbox->get_bounding_box(), current_id);
+                    emit_bbox = false;
+                }
             }
         }
     }

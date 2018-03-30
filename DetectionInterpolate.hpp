@@ -16,9 +16,10 @@ struct LinearInterpolation
     static std::vector<PtT> interpolate(PtT lhs, PtT rhs, const int num_frames)
     {
         std::vector<PtT> bbox_interpolation;
-        bbox_interpolation.reserve(num_frames);
+        //bbox_interpolation.reserve(num_frames);
         for (int i = 0; i < num_frames; i++) {
-            bbox_interpolation[i] = lhs.predict(rhs, num_frames, i+1); 
+            //bbox_interpolation[i] = lhs.predict(rhs, num_frames, i+1); 
+            bbox_interpolation.emplace_back(lhs.predict(rhs, num_frames, i+1)); 
         }
 
         return bbox_interpolation;

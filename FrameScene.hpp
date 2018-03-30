@@ -16,6 +16,7 @@
 
 class FrameViewer : public QGraphicsScene
 {
+    Q_OBJECT
 public:
     using PixelT = uint8_t;
     FrameViewer(const QImage& initial_frame, QObject *parent = 0);
@@ -78,6 +79,13 @@ public:
         annotation_locations.insert(annotation_locations.end(), metadata.segm_points.begin(), metadata.segm_points.end());
     }
 
+    void get_next_bounding_box() {
+        emit_bbox = true;
+    }
+
+signals:
+    void bounding_box_created(const QRect& bbox, const int current_id);
+
 protected slots:
     void drawBackground(QPainter* painter, const QRectF &rect) override;
     void drawForeground(QPainter* painter, const QRectF &rect) override;
@@ -114,6 +122,8 @@ private:
     //policies for the annotation type being done or something
     int selected_bbox;
     QPointF selected_bbox_pt;
+
+    bool emit_bbox;
 
     ANNOTATION_MODE mode;
 };

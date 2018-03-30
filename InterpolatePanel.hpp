@@ -7,6 +7,7 @@
 #include <QPushButton>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
+#include <QRect>
 
 #include "DetectionInterpolate.hpp"
 #include "AnnotationTypes.hpp"
@@ -24,13 +25,13 @@ struct interpolation_data {
     interpolation_data()
     {}
 
-    bbox_t lhs_bbox; 
-    int lhs_fnum;
-    int lhs_id;
+    interpolation_data(bbox_t metabbox, int fnum, int id)
+        : bbox(metabbox), fnum(fnum), id(id)
+    {}
 
-    bbox_t rhs_bbox; 
-    int rhs_fnum;
-    int rhs_id;
+    bbox_t bbox; 
+    int fnum;
+    int id;
 };
 
 class Interpolatemetadata : public QWidget
@@ -40,13 +41,26 @@ public:
     Interpolatemetadata(const std::string& meta_label, QWidget* parent=0);
     
     interpolation_data get_metadata() const {
-        interpolation_data meta;
-        //TODO: need to populate the metadata somehow
+        interpolation_data meta {bbox, frame_num, instance_id};
         return meta;
     }
 
-private:
+    void set_metadata(const QRect& rect, const int id, const int fnum) {
+        int x1, y1, x2, y2;
+        rect.getCoords(&x1, &y1, &x2, &y2);
+        bbox.set_coords(x1, y1, x2, y2);
+        frame_num = fnum;
+        instance_id = id;
 
+        frame_num_text->setText(make_fnum_label(frame_num).c_str());
+        instance_id_text->setText(make_instid_label(instance_id).c_str());
+    }
+
+signals:
+    void interpolate_ready(const int interp_idx, const Qt::CheckState cstate);
+    void interpolate_goto(const int frame_idx);
+
+private:
     std::string make_fnum_label(const int fnum) {
         std::string fnum_str {label + " frame #: " + std::to_string(fnum)};
         return fnum_str;
@@ -59,9 +73,10 @@ private:
 
     void goto_frame();
 
-    const std::string& label;
+    const std::string label;
     int frame_num;
     int instance_id;
+    BoundingBox<float> bbox;
 
     QCheckBox* selected_cbox;
     QLabel* frame_num_text;
@@ -83,8 +98,13 @@ class InterpolatePanel : public QWidget
 public:
     explicit InterpolatePanel(QWidget* parent=0);
 
-private:
+    Interpolatemetadata* get_metadata(int idx) const {
+        return (idx == 0 ? lhs_metadata : rhs_metadata);
+    }
+signals:
+    void interpolated_annotations(const std::vector<BoundingBoxMD>& annotation_bbox, const int lhs_fnum);
 
+private:
     void interpolate_frames();
 
     Interpolatemetadata* lhs_metadata;

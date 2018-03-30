@@ -3,6 +3,7 @@
 
 #include <QTimer>
 #include <QFileDialog>
+#include <QObject>
 
 #include "VideoWindow.hpp"
 #include "AnnotationTypes.hpp"
@@ -46,6 +47,15 @@ VideoWindow::VideoWindow(std::vector<std::string>&& labeler_args, QWidget *paren
     fviewer = std::make_shared<FrameViewer>(initial_frame, main_window);
 
     interpolation_panel = new InterpolatePanel(main_window);
+    QObject::connect(interpolation_panel->get_metadata(0), &Interpolatemetadata::interpolate_ready, this, &VideoWindow::interpolate_select);
+    QObject::connect(interpolation_panel->get_metadata(0), &Interpolatemetadata::interpolate_goto, this, &VideoWindow::interpolate_jump);
+    QObject::connect(interpolation_panel->get_metadata(1), &Interpolatemetadata::interpolate_ready, this, &VideoWindow::interpolate_select);
+    QObject::connect(interpolation_panel->get_metadata(1), &Interpolatemetadata::interpolate_goto, this, &VideoWindow::interpolate_jump);
+
+    QObject::connect(interpolation_panel, &InterpolatePanel::interpolated_annotations, this, &VideoWindow::accept_interpolations);
+
+    active_interpidx = -1;
+    QObject::connect(fviewer.get(), &FrameViewer::bounding_box_created, this, &VideoWindow::set_bbox);
 
     label_mode = ANNOTATION_MODE::BOUNDINGBOX;
     fviewer->set_annotation_mode(label_mode);
@@ -195,7 +205,6 @@ void VideoWindow::set_cfgUI_layout(QHBoxLayout* cfg_layout)
     cfg_layout->addWidget(next_btn);
     cfg_layout->addWidget(ql_framejump_txt);
     cfg_layout->addWidget(frame_incledit);
- 
 }
 
 void VideoWindow::keyPressEvent(QKeyEvent *evt)
@@ -383,4 +392,42 @@ void VideoWindow::set_frame_incamount()
 {
     auto frame_jump = frame_incledit->text().toInt();
     frame_incamount = frame_jump;
+}
+
+void VideoWindow::interpolate_select(int interp_idx, const Qt::CheckState state)
+{
+    std::cout << "SLOT: @VideoWindow::interpolate_select -- cbox " << interp_idx << " @ " << (state == Qt::Unchecked ? " UNCHECKED" : " CHECKED") << std::endl; 
+    fviewer->get_next_bounding_box();
+    active_interpidx = interp_idx;
+}
+
+void VideoWindow::interpolate_jump(const int target_frame_index)
+{
+   std::cout << "SLOT: VideoWindow::interpolate_jump " << target_frame_index << std::endl;
+    const int frame_index = vreader->get_current_frame_index();
+    auto vframe = vreader->get_frame(target_frame_index);
+    //save frame's existing metadata, change frame, and (if applicable) load saved metadata for the new frame
+    frame_change_metadata(vframe, frame_index, target_frame_index);
+}
+
+void VideoWindow::set_bbox(const QRect& bbox, const int current_id)
+{
+    const int frame_index = vreader->get_current_frame_index();
+    auto interpmeta = interpolation_panel->get_metadata(active_interpidx);
+    interpmeta->set_metadata(bbox, current_id, frame_index);
+}
+
+
+void VideoWindow::accept_interpolations(const std::vector<BoundingBoxMD>& annotation_bbox, const int lhs_fnum)
+{
+    const int fheight = fviewer->get_frame_height();
+    const int fwidth = fviewer->get_frame_width();
+
+    int frame_index = lhs_fnum; 
+    for (auto bbox : annotation_bbox) {
+        std::vector<BoundingBoxMD> det_annotations {bbox};
+        auto frame_name = vreader->get_frame_name(frame_index);
+        vlogger->write_bboxes(frame_name, std::move(det_annotations), fheight, fwidth);
+        frame_index++;
+    }
 }

@@ -94,9 +94,15 @@ struct BoundingBox
 {
     static constexpr T denom = 2;
     BoundingBox() 
-	{}
+    {}
 
-    BoundingBox(T x1, T y1, T x2, T y2) {
+    BoundingBox(T x1, T y1, T x2, T y2) 
+    {
+        set_coords(x1, y1, x2, y2);
+    }
+
+    void set_coords(T x1, T y1, T x2, T y2)
+    {
         center = BoxPoint<T>((x1+x2)/denom, (y1+y2)/denom);
         dims = BoxPoint<T>(std::abs(x2-x1), std::abs(y2-y1));
     }
@@ -125,7 +131,6 @@ struct BoundingBox
 
     BoxPoint<T> center;
     BoxPoint<T> dims; 
-
 };
 
 template<typename T>
