@@ -262,8 +262,10 @@ void FrameViewer::undo_label()
         //the ending of annotation_locations as well, so that we can undo for longer
     } else {
         utils::point_un_redo(boundingbox_locations, limbo_bboxes);
-        auto rm_bbox = limbo_bboxes.back();
-        this->removeItem(rm_bbox.get());
+        if (limbo_bboxes.size() > 0) {
+            auto rm_bbox = limbo_bboxes.back();
+            this->removeItem(rm_bbox.get());
+        }
     }
     this->update();
 }
@@ -276,7 +278,9 @@ void FrameViewer::redo_label()
         //TODO: do we need to propogate this to the annotation_locations as well?
     } else {
         utils::point_un_redo(limbo_bboxes, boundingbox_locations);
-        this->addItem(boundingbox_locations.back().get());
+        if (boundingbox_locations.size() > 0) {
+            this->addItem(boundingbox_locations.back().get());
+        }
     }
     this->update();
 }
