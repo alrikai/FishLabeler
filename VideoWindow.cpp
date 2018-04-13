@@ -44,7 +44,7 @@ VideoWindow::VideoWindow(std::vector<std::string>&& labeler_args, QWidget *paren
 
     main_window = new QWidget(this);
     setCentralWidget(main_window);
-    fviewer = std::make_shared<FrameViewer>(initial_frame, main_window);
+    fviewer = std::make_shared<FrameScene>(initial_frame, main_window);
 
     interpolation_panel = new InterpolatePanel(main_window);
     QObject::connect(interpolation_panel->get_metadata(0), &Interpolatemetadata::interpolate_ready, this, &VideoWindow::interpolate_select);
@@ -55,7 +55,7 @@ VideoWindow::VideoWindow(std::vector<std::string>&& labeler_args, QWidget *paren
     QObject::connect(interpolation_panel, &InterpolatePanel::interpolated_annotations, this, &VideoWindow::accept_interpolations);
 
     active_interpidx = -1;
-    QObject::connect(fviewer.get(), &FrameViewer::bounding_box_created, this, &VideoWindow::set_bbox);
+    QObject::connect(fviewer.get(), &FrameScene::bounding_box_created, this, &VideoWindow::set_bbox);
 
     label_mode = ANNOTATION_MODE::BOUNDINGBOX;
     fviewer->set_annotation_mode(label_mode);
@@ -218,6 +218,10 @@ void VideoWindow::keyPressEvent(QKeyEvent *evt)
             std::cout << "PREV key" << std::endl;
             prev_frame();
             break;
+        case Qt::Key_F:
+            std::cout << "Fullview mode toggle" << std::endl;
+            toggle_fullview();
+            break;
         default:
             std::cout << "key: " << evt->key() << std::endl;
     }
@@ -321,6 +325,11 @@ void VideoWindow::prev_frame()
     auto vframe = vreader->get_frame(target_frame_index);
     //save frame's existing metadata, change frame, and (if applicable) load saved metadata for the new frame
     frame_change_metadata(vframe, frame_index, target_frame_index);
+}
+
+void VideoWindow::toggle_fullview()
+{
+    fview->toggle_frameview();
 }
 
 void VideoWindow::closeEvent(QCloseEvent *evt)

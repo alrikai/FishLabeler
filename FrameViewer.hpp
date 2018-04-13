@@ -15,9 +15,10 @@ public:
     FrameView(QGraphicsScene* fview, QWidget* parent = 0)
         : QGraphicsView(fview, parent)
     {
-        fviewer = reinterpret_cast<FrameViewer*>(fview);
+        fviewer = reinterpret_cast<FrameScene*>(fview);
         this->update();
         this->setMouseTracking(true);
+        zoom_out = false;
     }
 
     QSize sizeHint() const override {
@@ -28,6 +29,10 @@ public:
         //re-set any viewing transformations
         resetMatrix();
         fviewer->display_frame(frame);
+
+        if (zoom_out) {
+            this->fitInView(fviewer->get_current_pixframe(), Qt::KeepAspectRatio);
+        }
     }
 
     FrameAnnotations get_frame_annotations() const {
@@ -46,12 +51,26 @@ public:
         fviewer->set_annotation_mode(mode);
     }
 
+    void toggle_frameview() {
+        zoom_out = !zoom_out;
+
+        resetMatrix();
+        this->update();
+        fviewer->update();
+
+        if (zoom_out) {
+            this->fitInView(fviewer->get_current_pixframe(), Qt::KeepAspectRatio);
+        }
+
+    }
+
 protected:
     //for zooming into the scene -- hold down control to zoom (versus just scrolling up and down)
     void wheelEvent(QWheelEvent*) override;
 
 private:
-    FrameViewer* fviewer; 
+    FrameScene* fviewer; 
+    bool zoom_out;
 };
 
 #endif

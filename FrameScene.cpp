@@ -61,7 +61,7 @@ namespace utils {
     }
 }
 
-FrameViewer::FrameViewer(const QImage& initial_frame, QObject* parent)
+FrameScene::FrameScene(const QImage& initial_frame, QObject* parent)
     : QGraphicsScene(parent) 
 {
     drawing_annotations = false;
@@ -74,7 +74,7 @@ FrameViewer::FrameViewer(const QImage& initial_frame, QObject* parent)
     current_id = 0;
 }
 
-void FrameViewer::display_frame(const QImage& frame) 
+void FrameScene::display_frame(const QImage& frame) 
 {
     //if we are doing segmentation, write out whatever the current mask is as well
     if (mode == ANNOTATION_MODE::SEGMENTATION) {
@@ -97,7 +97,7 @@ void FrameViewer::display_frame(const QImage& frame)
     this->update();
 }
 
-void FrameViewer::drawBackground(QPainter* painter, const QRectF& rect)
+void FrameScene::drawBackground(QPainter* painter, const QRectF& rect)
 {
     if (current_pixframe == nullptr) { 
         current_pixframe = this->addPixmap(current_frame);
@@ -106,7 +106,7 @@ void FrameViewer::drawBackground(QPainter* painter, const QRectF& rect)
     }
 }
 
-void FrameViewer::drawForeground(QPainter* painter, const QRectF& rect)
+void FrameScene::drawForeground(QPainter* painter, const QRectF& rect)
 {
     QPen pen;
     pen.setWidth(annotation_brushsz);
@@ -148,7 +148,7 @@ void FrameViewer::drawForeground(QPainter* painter, const QRectF& rect)
     }
 }
 
-void FrameViewer::mouseMoveEvent(QGraphicsSceneMouseEvent* mevt)
+void FrameScene::mouseMoveEvent(QGraphicsSceneMouseEvent* mevt)
 {
     QGraphicsScene::mouseMoveEvent(mevt);
     if (drawing_annotations) {
@@ -167,7 +167,7 @@ void FrameViewer::mouseMoveEvent(QGraphicsSceneMouseEvent* mevt)
     }
 }
 
-void FrameViewer::mousePressEvent(QGraphicsSceneMouseEvent* mevt)
+void FrameScene::mousePressEvent(QGraphicsSceneMouseEvent* mevt)
 {
     QGraphicsScene::mousePressEvent(mevt);
     if(!mevt->isAccepted()) {
@@ -219,7 +219,7 @@ void FrameViewer::mousePressEvent(QGraphicsSceneMouseEvent* mevt)
     this->update();
 }
 
-void FrameViewer::mouseReleaseEvent(QGraphicsSceneMouseEvent* mevt)
+void FrameScene::mouseReleaseEvent(QGraphicsSceneMouseEvent* mevt)
 {
     QGraphicsScene::mouseReleaseEvent(mevt);
     if (mode == ANNOTATION_MODE::SEGMENTATION) {
@@ -251,7 +251,7 @@ void FrameViewer::mouseReleaseEvent(QGraphicsSceneMouseEvent* mevt)
     this->update();
 }
 
-void FrameViewer::undo_label()
+void FrameScene::undo_label()
 {
     if (mode == ANNOTATION_MODE::SEGMENTATION) {
         //TODO: if the brushsz changes from when the point was originally drawn, this will not be correct
@@ -270,7 +270,7 @@ void FrameViewer::undo_label()
     this->update();
 }
 
-void FrameViewer::redo_label()
+void FrameScene::redo_label()
 {
     if (mode == ANNOTATION_MODE::SEGMENTATION) {
         //TODO: need th brush size as well?
@@ -285,7 +285,7 @@ void FrameViewer::redo_label()
     this->update();
 }
 
-void FrameViewer::keyPressEvent(QKeyEvent *evt)
+void FrameScene::keyPressEvent(QKeyEvent *evt)
 {
     if (evt->modifiers() & Qt::ControlModifier) {
         switch(evt->key()) {

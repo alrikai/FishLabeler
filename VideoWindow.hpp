@@ -15,6 +15,7 @@
 #include <QVBoxLayout>
 
 #include "VideoReader.hpp"
+#include "FrameScene.hpp"
 #include "FrameViewer.hpp"
 #include "VideoLogger.hpp"
 #include "InterpolatePanel.hpp"
@@ -45,6 +46,7 @@ private:
     void set_cfgUI_layout(QHBoxLayout* layout);
     void next_frame();
     void prev_frame();
+    void toggle_fullview();
     void set_frame_incamount();
 
     void cycle_label_mode();
@@ -59,7 +61,7 @@ private:
     void set_bbox(const QRect& bbox, const int current_id);
 
     //TODO: figure out if Qt manages the lifetime, or if I do...
-    std::shared_ptr<FrameViewer> fviewer;
+    std::shared_ptr<FrameScene> fviewer;
     FrameView* fview;
     InterpolatePanel* interpolation_panel;
     int active_interpidx;

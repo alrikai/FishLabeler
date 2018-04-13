@@ -14,12 +14,12 @@
 #include "AnnotationTypes.hpp"
 #include "BoundingBoxViz.hpp"
 
-class FrameViewer : public QGraphicsScene
+class FrameScene : public QGraphicsScene
 {
     Q_OBJECT
 public:
     using PixelT = uint8_t;
-    FrameViewer(const QImage& initial_frame, QObject *parent = 0);
+    FrameScene(const QImage& initial_frame, QObject *parent = 0);
 
     void display_frame(const QImage& frame);
 
@@ -83,6 +83,9 @@ public:
         emit_bbox = true;
     }
 
+    QGraphicsPixmapItem* get_current_pixframe() const {
+        return current_pixframe;
+    }  
 signals:
     void bounding_box_created(const QRect& bbox, const int current_id);
 
