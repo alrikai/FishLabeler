@@ -436,6 +436,15 @@ void VideoWindow::accept_interpolations(const std::vector<BoundingBoxMD>& annota
     for (auto bbox : annotation_bbox) {
         std::vector<BoundingBoxMD> det_annotations {bbox};
         auto frame_name = vreader->get_frame_name(frame_index);
+        //keep previous bboxes within the interpolation frame subset
+        if (vlogger->has_annotations(frame_name) || vlogger->has_boundingbox(frame_name)) {
+            auto nfbboxes = vlogger->get_boundingboxes(frame_name);
+            //TODO: is there any dependency on the order of instances in the file? I don't think so...
+            for (auto prevdet : nfbboxes) { 
+                det_annotations.emplace_back(prevdet);
+            }
+        }
+
         vlogger->write_bboxes(frame_name, std::move(det_annotations), fheight, fwidth);
         frame_index++;
     }
