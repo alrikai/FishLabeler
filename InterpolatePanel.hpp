@@ -60,6 +60,11 @@ public:
         return selected_cbox;
     }
 
+    void reset_metadata() {
+        frame_num = -1; 
+        instance_id = -1;
+    }
+
 signals:
     void interpolate_ready(const int interp_idx, const Qt::CheckState cstate);
     void interpolate_goto(const int frame_idx);

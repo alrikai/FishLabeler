@@ -72,6 +72,10 @@ FrameScene::FrameScene(const QImage& initial_frame, QObject* parent)
     selected_bbox = -1;
     emit_bbox = false;
     current_id = 0;
+
+    //set the allowable thresholds for any annotations based on the image dimensions
+    allowable_height = initial_frame.height();
+    allowable_width = initial_frame.width();
 }
 
 void FrameScene::display_frame(const QImage& frame) 
@@ -177,12 +181,15 @@ void FrameScene::mousePressEvent(QGraphicsSceneMouseEvent* mevt)
     }
     std::cout << "mpos: " << mevt->scenePos().x() << ", " << mevt->scenePos().y() << " @bsz " << annotation_brushsz << std::endl;
 
-    if (mode == ANNOTATION_MODE::SEGMENTATION) {
-        const int rowpos_click = static_cast<int>(std::round(mevt->scenePos().x()));
-        const int colpos_click = static_cast<int>(std::round(mevt->scenePos().y()));
-        utils::add_segbrush_pixels(current_mask, rowpos_click, colpos_click, annotation_brushsz);
-    } else {
+    const int rowpos_click = static_cast<int>(std::round(mevt->scenePos().y()));
+    const int colpos_click = static_cast<int>(std::round(mevt->scenePos().x()));
+    const int selected_rowpos = std::max(0, std::min(rowpos_click, allowable_height));
+    const int selected_colpos = std::max(0, std::min(colpos_click, allowable_width));
 
+    if (mode == ANNOTATION_MODE::SEGMENTATION) {
+
+        utils::add_segbrush_pixels(current_mask, selected_colpos, selected_rowpos, annotation_brushsz);
+    } else {
         //reset the current selection
         selected_bbox = -1;
         for (int bbox_idx = 0; bbox_idx < boundingbox_locations.size(); bbox_idx++) {
@@ -195,20 +202,11 @@ void FrameScene::mousePressEvent(QGraphicsSceneMouseEvent* mevt)
         //if we clicked on a bounding box, modify that bounding box. If not, then add a new one
         if (selected_bbox >= 0) {
             std::cout << "Clicked on BBOX @ID " << boundingbox_locations[selected_bbox]->get_id() << std::endl;
-            selected_bbox_pt = mevt->scenePos();
-            //NOTE: we can somehow get to the point where we undo a box, then drag a different box, and the undone one shows up during the dragging.
-            //Need to see why this happens
             current_bbox = nullptr;
         } else {
-            auto mdata_item = itemAt(mevt->pos(), QTransform());
-            if (mdata_item) {
-                std::cout << "clicked on item " << mdata_item << std::endl;
-                mdata_item->setFocus();
-            } else {
-                std::cout << "did not click on item " << std::endl;
-            }
             static const QSize default_bbox_sz {0, 0};
-            auto current_bbox_rect = QRect(QPoint(mevt->scenePos().x(), mevt->scenePos().y()), default_bbox_sz);
+            //clip the click to the allowable boundaries
+            auto current_bbox_rect = QRect(QPoint(selected_colpos, selected_rowpos), default_bbox_sz);
             current_bbox = std::make_shared<BoundingBoxViz>(current_bbox_rect, current_id);
             this->addItem(current_bbox.get());
             selected_bbox = -1;

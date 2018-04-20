@@ -41,6 +41,8 @@ Interpolatemetadata::Interpolatemetadata(const std::string& meta_label, QWidget*
         int interp_idx = (this->label == "LHS" ? 0 : 1);
         bool activate_interp = (state == Qt::Checked);
         if (activate_interp) {
+            //TODO: clear out the old metadata state
+            reset_metadata(); 
             emit interpolate_ready(interp_idx, state);
         } else {
             std::cout << "disabling " << label << " interpolation" << std::endl; 
@@ -72,8 +74,31 @@ Interpolatemetadata::Interpolatemetadata(const std::string& meta_label, QWidget*
 
 void InterpolatePanel::interpolate_frames()
 {
+    auto lhs_state = lhs_metadata->get_checkbox()->checkState();
+    auto rhs_state = rhs_metadata->get_checkbox()->checkState();
+    if (lhs_state != Qt::Checked || rhs_state != Qt::Checked) {
+        std::cout << "NOTE: LHS " << (lhs_state == Qt::Checked ? " selected":" unselected") 
+            << ", RHS " << (rhs_state == Qt::Checked ? " selected":" unselected") << std::endl;
+        return;
+    }
+
     auto lhs_fdata = lhs_metadata->get_metadata();
     auto rhs_fdata = rhs_metadata->get_metadata();
+    if (lhs_fdata.fnum < 0 || rhs_fdata.fnum < 0 || lhs_fdata.fnum == rhs_fdata.fnum) {
+        std::cout << "NOTE: invalid interpolate bounds -- LHS: " << lhs_fdata.fnum << " RHS: " << rhs_fdata.fnum << std::endl; 
+        return;
+    }
+
+    //swap LHS and RHS if they are reversed
+    //TODO: would this mess the LHS and RHS goto parts up? --> probably doesn't matter 
+    if (rhs_fdata.fnum < lhs_fdata.fnum) { 
+        std::cout << "NOTE: reversing LHS and RHS" << std::endl;
+        //TODO: can we just use std::swap?
+        auto tmp_fdata = rhs_fdata;
+        rhs_fdata = lhs_fdata;
+        lhs_fdata = tmp_fdata;
+    }
+
     const int num_frames = rhs_fdata.fnum - lhs_fdata.fnum;
     assert(lhs_fdata.id == rhs_fdata.id);
 

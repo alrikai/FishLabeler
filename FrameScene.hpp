@@ -121,6 +121,9 @@ private:
     bool drawing_annotations;
     int current_id;
 
+    int allowable_height;
+    int allowable_width;
+
     //TODO: figure out a cleaner way to have these -- this is for adjusting the bounding boxes, maybe we should move to using
     //policies for the annotation type being done or something
     int selected_bbox;
