@@ -202,6 +202,9 @@ void FrameScene::mousePressEvent(QGraphicsSceneMouseEvent* mevt)
         //if we clicked on a bounding box, modify that bounding box. If not, then add a new one
         if (selected_bbox >= 0) {
             std::cout << "Clicked on BBOX @ID " << boundingbox_locations[selected_bbox]->get_id() << std::endl;
+            //TODO: do we need to use the clipped bounds? --> shouldn't matter, as it should be impossible to have
+            //a bounding box that we've clicked on that is out of bounds
+            selected_bbox_pt = mevt->scenePos();
             current_bbox = nullptr;
         } else {
             static const QSize default_bbox_sz {0, 0};
@@ -220,18 +223,30 @@ void FrameScene::mousePressEvent(QGraphicsSceneMouseEvent* mevt)
 void FrameScene::mouseReleaseEvent(QGraphicsSceneMouseEvent* mevt)
 {
     QGraphicsScene::mouseReleaseEvent(mevt);
+    const int rowpos_click = static_cast<int>(std::round(mevt->scenePos().y()));
+    const int colpos_click = static_cast<int>(std::round(mevt->scenePos().x()));
+    const int selected_rowpos = std::max(0, std::min(rowpos_click, allowable_height));
+    const int selected_colpos = std::max(0, std::min(colpos_click, allowable_width));
+
+
     if (mode == ANNOTATION_MODE::SEGMENTATION) {
         std::cout << "mpos: " << mevt->scenePos().x() << ", " << mevt->scenePos().y() << " @bsz " << annotation_brushsz << std::endl;
-        const int rowpos_click = static_cast<int>(std::round(mevt->scenePos().x()));
-        const int colpos_click = static_cast<int>(std::round(mevt->scenePos().y()));
         utils::add_segbrush_pixels(current_mask, rowpos_click, colpos_click, annotation_brushsz);
     } else {
         if (selected_bbox >= 0) {
-            auto bbox_moveamt = mevt->scenePos() - selected_bbox_pt;
+            auto bbox_moveamt = QPointF(selected_colpos, selected_rowpos) - selected_bbox_pt;
             QPoint bbox_movement {std::rint(bbox_moveamt.x()), std::rint(bbox_moveamt.y())};
             std::cout << "Moving bbox by " << bbox_movement.x() << ", " <<  bbox_movement.y() << std::endl;
 
             boundingbox_locations[selected_bbox]->get_bounding_box().translate(bbox_movement); 
+            //TODO: clip the bounding box to the allowable area
+            auto bbox_loc = boundingbox_locations[selected_bbox]->get_bounding_box();
+            int x1, x2, y1, y2;
+            bbox_loc.getCoords(&x1, &y1, &x2, &y2);
+            boundingbox_locations[selected_bbox]->get_bounding_box().setLeft(std::max(0, x1));
+            boundingbox_locations[selected_bbox]->get_bounding_box().setTop(std::max(0, y1));
+            boundingbox_locations[selected_bbox]->get_bounding_box().setRight(std::min(allowable_width, x2));
+            boundingbox_locations[selected_bbox]->get_bounding_box().setBottom(std::min(allowable_height, y2));
         } else {
             if (current_bbox) {
                 current_bbox->get_bounding_box().setBottomRight(QPoint(mevt->scenePos().x(), mevt->scenePos().y()));
