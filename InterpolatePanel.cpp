@@ -41,12 +41,10 @@ Interpolatemetadata::Interpolatemetadata(const std::string& meta_label, QWidget*
         int interp_idx = (this->label == "LHS" ? 0 : 1);
         bool activate_interp = (state == Qt::Checked);
         if (activate_interp) {
-            //TODO: clear out the old metadata state
+            //clear out the old metadata state
             reset_metadata(); 
-            emit interpolate_ready(interp_idx, state);
-        } else {
-            std::cout << "disabling " << label << " interpolation" << std::endl; 
         }
+        emit interpolate_state(interp_idx, state);
     });
 
     frame_num_text = new QLabel(make_fnum_label(frame_num).c_str(), this);

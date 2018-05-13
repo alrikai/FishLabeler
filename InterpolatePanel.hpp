@@ -66,7 +66,7 @@ public:
     }
 
 signals:
-    void interpolate_ready(const int interp_idx, const Qt::CheckState cstate);
+    void interpolate_state(const int interp_idx, const Qt::CheckState cstate);
     void interpolate_goto(const int frame_idx);
 
 private:

@@ -137,6 +137,7 @@ std::vector<BoundingBoxMD> VideoLogger::get_boundingboxes (const std::string& fr
         std::ifstream bbox_ifstream(fpath.string());
         while(std::getline(bbox_ifstream, bbox_str)) {
             bbox_str.erase (std::remove (bbox_str.begin(), bbox_str.end(), ' '), bbox_str.end());
+            boost::trim_right(bbox_str);
             std::vector<std::string> bbox_tokens;
             boost::split(bbox_tokens, bbox_str, boost::is_any_of(","));
             assert(bbox_tokens.size() % 5 == 0);

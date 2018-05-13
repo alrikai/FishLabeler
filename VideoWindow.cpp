@@ -47,10 +47,11 @@ VideoWindow::VideoWindow(std::vector<std::string>&& labeler_args, QWidget *paren
     fviewer = std::make_shared<FrameScene>(initial_frame, main_window);
 
     interpolation_panel = new InterpolatePanel(main_window);
-    QObject::connect(interpolation_panel->get_metadata(0), &Interpolatemetadata::interpolate_ready, this, &VideoWindow::interpolate_select);
-    QObject::connect(interpolation_panel->get_metadata(0), &Interpolatemetadata::interpolate_goto, this, &VideoWindow::interpolate_jump);
-    QObject::connect(interpolation_panel->get_metadata(1), &Interpolatemetadata::interpolate_ready, this, &VideoWindow::interpolate_select);
-    QObject::connect(interpolation_panel->get_metadata(1), &Interpolatemetadata::interpolate_goto, this, &VideoWindow::interpolate_jump);
+    const int num_interp = 2;
+    for (int i = 0; i < num_interp; i++) {
+        QObject::connect(interpolation_panel->get_metadata(i), &Interpolatemetadata::interpolate_state, this, &VideoWindow::interpolate_select);
+        QObject::connect(interpolation_panel->get_metadata(i), &Interpolatemetadata::interpolate_goto, this, &VideoWindow::interpolate_jump);
+    }
 
     QObject::connect(interpolation_panel, &InterpolatePanel::interpolated_annotations, this, &VideoWindow::accept_interpolations);
 
@@ -406,8 +407,13 @@ void VideoWindow::set_frame_incamount()
 void VideoWindow::interpolate_select(int interp_idx, const Qt::CheckState state)
 {
     std::cout << "SLOT: @VideoWindow::interpolate_select -- cbox " << interp_idx << " @ " << (state == Qt::Unchecked ? " UNCHECKED" : " CHECKED") << std::endl; 
-    fviewer->get_next_bounding_box();
-    active_interpidx = interp_idx;
+    if (state == Qt::Unchecked) {
+        fviewer->set_bounding_box_grab(false);
+        active_interpidx = -1;
+    } else {
+        fviewer->set_bounding_box_grab(true);
+        active_interpidx = interp_idx;
+    }
 }
 
 void VideoWindow::interpolate_jump(const int target_frame_index)

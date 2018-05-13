@@ -79,8 +79,12 @@ public:
         annotation_locations.insert(annotation_locations.end(), metadata.segm_points.begin(), metadata.segm_points.end());
     }
 
-    void get_next_bounding_box() {
-        emit_bbox = true;
+    bool get_bounding_box_grab() const {
+        return emit_bbox;
+    }
+
+    void set_bounding_box_grab(bool grab) {
+        emit_bbox = grab;
     }
 
     QGraphicsPixmapItem* get_current_pixframe() const {

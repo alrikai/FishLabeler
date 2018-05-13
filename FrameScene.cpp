@@ -247,6 +247,9 @@ void FrameScene::mouseReleaseEvent(QGraphicsSceneMouseEvent* mevt)
             boundingbox_locations[selected_bbox]->get_bounding_box().setTop(std::max(0, y1));
             boundingbox_locations[selected_bbox]->get_bounding_box().setRight(std::min(allowable_width, x2));
             boundingbox_locations[selected_bbox]->get_bounding_box().setBottom(std::min(allowable_height, y2));
+            if (emit_bbox) {
+                emit bounding_box_created(boundingbox_locations[selected_bbox]->get_bounding_box(), boundingbox_locations[selected_bbox]->get_id());
+            }
         } else {
             if (current_bbox) {
                 current_bbox->get_bounding_box().setBottomRight(QPoint(mevt->scenePos().x(), mevt->scenePos().y()));
@@ -255,7 +258,7 @@ void FrameScene::mouseReleaseEvent(QGraphicsSceneMouseEvent* mevt)
                 boundingbox_locations.emplace_back(current_bbox);
                 if (emit_bbox) {
                     emit bounding_box_created(current_bbox->get_bounding_box(), current_id);
-                    emit_bbox = false;
+                    //emit_bbox = false;
                 }
             }
         }
