@@ -12,7 +12,7 @@ numfiles=$(ls "$OUTPUT_DIR"/*.jpg | wc -l)
 echo "NUMFILES: $numfiles"
 #NOTE: don't re-extract frames if they already exist
 if [ "$numfiles" -eq 0 ]; then
-    ffmpeg -i "$VIDEO_PATH" -qscale:v 2 ""$OUTPUT_DIR"/%06d.jpg"
+    ffmpeg -i "$VIDEO_PATH" -qscale:v 2 -start_number 0 ""$OUTPUT_DIR"/%06d.jpg"
 fi
 
 #write the video metadata out to a text file for the application

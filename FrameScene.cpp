@@ -187,7 +187,6 @@ void FrameScene::mousePressEvent(QGraphicsSceneMouseEvent* mevt)
     const int selected_colpos = std::max(0, std::min(colpos_click, allowable_width));
 
     if (mode == ANNOTATION_MODE::SEGMENTATION) {
-
         utils::add_segbrush_pixels(current_mask, selected_colpos, selected_rowpos, annotation_brushsz);
     } else {
         //reset the current selection

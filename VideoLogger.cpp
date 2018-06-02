@@ -8,6 +8,13 @@
 #include <boost/algorithm/string.hpp>  
 #include <boost/lexical_cast.hpp>
 
+namespace utils {
+    template <typename T>
+    T clip(const T n, const T low, const T high) {
+        return std::max(low, std::min(n, high));
+    }
+}
+
 void VideoLogger::create_logdirs(boost::filesystem::path& logdir, const std::string& logdir_name) 
 {
     logdir /= logdir_name;
@@ -68,6 +75,21 @@ void VideoLogger::write_bboxes(const std::string& framenum, std::vector<Bounding
         for (auto bbox_md : bbox_rects) {
             auto id = bbox_md.instance_id;
             bbox_md.bbox.getCoords(&tl_x, &tl_y, &br_x, &br_y);
+
+            //have the bbox coordinates arranged as [low col, low row, high col, high row]
+            if (tl_x > br_x) {
+                std::swap(tl_x, br_x);
+            }
+            if (tl_y > br_y) {
+                std::swap(tl_y, br_y);
+            }
+
+            //clip the bounding boxes to valid ranges too
+            tl_x = utils::clip(tl_x, 0, width);
+            br_x = utils::clip(br_x, 0, width);
+            tl_y = utils::clip(tl_y, 0, height);
+            br_y = utils::clip(br_y, 0, height);
+
             fout << id << ", " << tl_x << ", " << tl_y << ", " << br_x << ", " << br_y << "\n";
         }
         fout.close();
